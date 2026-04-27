@@ -541,22 +541,4 @@ else
 end
 ```
 
-## Security / Distribution
-
-This project is designed to be shipped as an obfuscated/private build to reduce code theft. That means:
-
-- do not depend on internal implementation details
-- do not edit or redistribute the unobfuscated source
-- use only the public API documented above
-- load the library via `HttpGet` (not local files)
-
-## Final Notes
-
-The public-facing design of this library is intentional:
-
-- one main source file
-- simple registration API
-- optional advanced configuration
-- no need to push helper logic into the user's script
-
 Users should be able to copy a tiny setup snippet, register commands, and move on with their project. That is the standard this library is aiming for.
