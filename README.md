@@ -17,7 +17,7 @@ The goal is simple: load one file, register your commands, and let the library h
 If you want something that feels clean to use from an executor script, this is the shape:
 
 ```lua
-local library = loadstring(game:HttpGet("<YOUR_LIBRARY_URL>"))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))()
 
 library:Command({
 	name = "speed",
@@ -41,10 +41,10 @@ library:Command({
 ### 1. Load the library
 
 ```lua
-local library = loadstring(game:HttpGet("<YOUR_LIBRARY_URL>"))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))()
 ```
 
-`<YOUR_LIBRARY_URL>` should point to the obfuscated build you want to distribute (GitHub raw, a paste/CDN link, etc.). Local usage (readfile/loadfile) is intentionally not supported in the public workflow.
+`https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau` should point to the obfuscated build you want to distribute (GitHub raw, a paste/CDN link, etc.). Local usage (readfile/loadfile) is intentionally not supported in the public workflow.
 
 ### 2. Configure the basics
 
