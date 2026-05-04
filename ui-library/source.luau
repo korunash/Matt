@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+ContextActionService = game:GetService("ContextActionService")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -134,27 +135,27 @@ local runtimeLayout = {
 local toastDuration = TOAST_DURATION
 
 -- Text
-local function trimLeft(text)
+function trimLeft(text)
 	return string.gsub(text or "", "^%s+", "")
 end
 
-local function trimRight(text)
+function trimRight(text)
 	return string.gsub(text or "", "%s+$", "")
 end
 
-local function trim(text)
+function trim(text)
 	return trimRight(trimLeft(text or ""))
 end
 
-local function toLower(text)
+function toLower(text)
 	return string.lower(text or "")
 end
 
-local function startsWith(text, prefix)
+function startsWith(text, prefix)
 	return string.sub(text or "", 1, #prefix) == prefix
 end
 
-local function escapeRichText(text)
+function escapeRichText(text)
 	text = string.gsub(text or "", "&", "&amp;")
 	text = string.gsub(text, "<", "&lt;")
 	text = string.gsub(text, ">", "&gt;")
@@ -162,11 +163,11 @@ local function escapeRichText(text)
 	return text
 end
 
-local function colorToHex(color)
+function colorToHex(color)
 	return string.format("#%02X%02X%02X", color.R * 255, color.G * 255, color.B * 255)
 end
 
-local function cloneArray(list)
+function cloneArray(list)
 	local cloned = {}
 	for _, value in ipairs(list or {}) do
 		cloned[#cloned + 1] = value
@@ -175,7 +176,7 @@ local function cloneArray(list)
 end
 
 -- Hotkey
-local function normalizeHotkeyToken(raw)
+function normalizeHotkeyToken(raw)
 	local normalized = toLower(trim(raw))
 	normalized = string.gsub(normalized, "%s+", "")
 
@@ -190,7 +191,7 @@ local function normalizeHotkeyToken(raw)
 	return normalized
 end
 
-local function getKeyCodeText(keyCode)
+function getKeyCodeText(keyCode)
 	if not keyCode then
 		return nil
 	end
@@ -240,7 +241,7 @@ local function getKeyCodeText(keyCode)
 	return digitMap[keyName] or punctuationMap[keyName]
 end
 
-local function findKeyCodeByDisplayToken(normalizedToken)
+function findKeyCodeByDisplayToken(normalizedToken)
 	if normalizedToken == "" then
 		return nil
 	end
@@ -255,7 +256,7 @@ local function findKeyCodeByDisplayToken(normalizedToken)
 	return nil
 end
 
-local function resolveHotkeyName(raw)
+function resolveHotkeyName(raw)
 	local normalized = normalizeHotkeyToken(raw)
 	if normalized == "" then
 		return false, nil, "Missing hotkey"
@@ -336,7 +337,7 @@ local function resolveHotkeyName(raw)
 end
 
 -- Command parsing
-local function tokenize(text)
+function tokenize(text)
 	local normalized = trimLeft(text or "")
 	local trailingSpace = normalized ~= "" and string.match(normalized, "%s$") ~= nil
 	local tokens = {}
@@ -348,7 +349,7 @@ local function tokenize(text)
 	return tokens, trailingSpace
 end
 
-local function isBlankCommandText(text)
+function isBlankCommandText(text)
 	local normalized = trimLeft(text or "")
 	if startsWith(normalized, "/") then
 		normalized = string.sub(normalized, 2)
@@ -357,14 +358,14 @@ local function isBlankCommandText(text)
 	return trimRight(normalized) == ""
 end
 
-local function sortCommands(commands)
+function sortCommands(commands)
 	table.sort(commands, function(left, right)
 		return toLower(left.name) < toLower(right.name)
 	end)
 	return commands
 end
 
-local function sortPlayers(players)
+function sortPlayers(players)
 	table.sort(players, function(left, right)
 		local leftName = toLower(left.DisplayName) .. ":" .. toLower(left.Name)
 		local rightName = toLower(right.DisplayName) .. ":" .. toLower(right.Name)
@@ -373,7 +374,7 @@ local function sortPlayers(players)
 	return players
 end
 
-local function listPlayers(query)
+function listPlayers(query)
 	local normalizedQuery = toLower(trim(query))
 	local results = {}
 
@@ -388,7 +389,7 @@ local function listPlayers(query)
 	return sortPlayers(results)
 end
 
-local function resolvePlayer(query)
+function resolvePlayer(query)
 	local normalizedQuery = trim(query)
 	if normalizedQuery == "" then
 		return false, nil, "Unspecified player"
@@ -427,7 +428,7 @@ local function resolvePlayer(query)
 	return false, nil, "Unspecified player"
 end
 
-local function validateInt(raw, spec)
+function validateInt(raw, spec)
 	local value = tonumber(raw)
 	if not value or value % 1 ~= 0 then
 		if spec.min then
@@ -447,7 +448,7 @@ local function validateInt(raw, spec)
 	return true, value
 end
 
-local function validateNumber(raw, spec)
+function validateNumber(raw, spec)
 	local value = tonumber(raw)
 	if not value then
 		if spec.min then
@@ -467,7 +468,7 @@ local function validateNumber(raw, spec)
 	return true, value
 end
 
-local function validateParam(raw)
+function validateParam(raw)
 	local value = trim(raw)
 	if value == "" then
 		return false, nil, "Missing parameter"
@@ -476,11 +477,11 @@ local function validateParam(raw)
 	return true, value
 end
 
-local function getSpecKind(spec)
+function getSpecKind(spec)
 	return toLower(type(spec.kind) == "string" and spec.kind or "param")
 end
 
-local function validateArgument(spec, raw)
+function validateArgument(spec, raw)
 	local kind = getSpecKind(spec)
 
 	if raw == "" and spec.required == false then
@@ -506,15 +507,15 @@ local function validateArgument(spec, raw)
 	return validateParam(raw)
 end
 
-local function getCommandTag(spec)
+function getCommandTag(spec)
 	return spec.tag or spec.kind or spec.name or "arg"
 end
 
-local function getTagColor(spec)
+function getTagColor(spec)
 	return TYPE_COLORS[getSpecKind(spec)] or Color3.fromRGB(200, 200, 200)
 end
 
-local function getAliasesText(command)
+function getAliasesText(command)
 	if not command.aliases or #command.aliases == 0 then
 		return ""
 	end
@@ -522,7 +523,7 @@ local function getAliasesText(command)
 	return " [" .. table.concat(command.aliases, ", ") .. "]"
 end
 
-local function buildCommandTitle(command)
+function buildCommandTitle(command)
 	local parts = { escapeRichText(command.name) }
 
 	for _, spec in ipairs(command.syntax or {}) do
@@ -534,7 +535,7 @@ local function buildCommandTitle(command)
 	return table.concat(parts, " ")
 end
 
-local function buildPlainCommandTitle(command)
+function buildPlainCommandTitle(command)
 	local parts = { command.name }
 
 	for _, spec in ipairs(command.syntax or {}) do
@@ -544,11 +545,11 @@ local function buildPlainCommandTitle(command)
 	return table.concat(parts, " ")
 end
 
-local function buildCommandDescription(command)
+function buildCommandDescription(command)
 	return (command.description or "") .. getAliasesText(command)
 end
 
-local function buildCommandCaption(command)
+function buildCommandCaption(command)
 	local caption = trim(tostring(command.caption or ""))
 	if caption ~= "" then
 		return caption
@@ -557,7 +558,7 @@ local function buildCommandCaption(command)
 	return buildCommandDescription(command)
 end
 
-local function cloneSyntax(syntax)
+function cloneSyntax(syntax)
 	local cloned = {}
 
 	for _, spec in ipairs(syntax or {}) do
@@ -576,7 +577,7 @@ local function cloneSyntax(syntax)
 	return cloned
 end
 
-local function normalizeAliases(aliases)
+function normalizeAliases(aliases)
 	local normalizedAliases = {}
 	local seen = {}
 
@@ -592,7 +593,7 @@ local function normalizeAliases(aliases)
 	return normalizedAliases
 end
 
-local function sanitizeCommandDefinition(rawCommand)
+function sanitizeCommandDefinition(rawCommand)
 	if type(rawCommand) ~= "table" then
 		return nil, "Command must be a table"
 	end
@@ -616,7 +617,7 @@ local function sanitizeCommandDefinition(rawCommand)
 	}
 end
 
-local function buildCommandIndexes(commands)
+function buildCommandIndexes(commands)
 	local byName = {}
 	local byAlias = {}
 
@@ -641,12 +642,12 @@ local function buildCommandIndexes(commands)
 	return byName, byAlias
 end
 
-local function findCommand(byName, byAlias, query)
+function findCommand(byName, byAlias, query)
 	local lowered = toLower(query or "")
 	return byName[lowered] or byAlias[lowered]
 end
 
-local function collectCommands(commands, query)
+function collectCommands(commands, query)
 	local loweredQuery = toLower(query or "")
 	local matches = {}
 
@@ -666,7 +667,7 @@ local function collectCommands(commands, query)
 	return sortCommands(matches)
 end
 
-local function buildReadyState(command)
+function buildReadyState(command)
 	return {
 		kind = "ready",
 		title = buildPlainCommandTitle(command),
@@ -675,7 +676,7 @@ local function buildReadyState(command)
 	}
 end
 
-local function getArgumentState(command, text)
+function getArgumentState(command, text)
 	local tokens, trailingSpace = tokenize(text)
 	local syntax = command.syntax or {}
 	local suppliedCount = math.max(0, #tokens - 1)
@@ -775,7 +776,7 @@ local function getArgumentState(command, text)
 	}
 end
 
-local function analyzeAgainstCommands(text, commands, byName, byAlias)
+function analyzeAgainstCommands(text, commands, byName, byAlias)
 	local trimmed = trimLeft(text or "")
 	if startsWith(trimmed, "/") then
 		trimmed = string.sub(trimmed, 2)
@@ -824,7 +825,7 @@ local function analyzeAgainstCommands(text, commands, byName, byAlias)
 	return getArgumentState(exactCommand, trimmed)
 end
 
-local function parseForExecution(text, byName, byAlias)
+function parseForExecution(text, byName, byAlias)
 	local trimmed = trimLeft(text or "")
 	if startsWith(trimmed, "/") then
 		trimmed = string.sub(trimmed, 2)
@@ -885,7 +886,7 @@ local function parseForExecution(text, byName, byAlias)
 	}
 end
 
-local function buildSuggestionDefinitions(state)
+function buildSuggestionDefinitions(state)
 	if state.kind == "commands" then
 		local definitions = {}
 
@@ -1349,7 +1350,7 @@ AutoCompleteCorner.Name = "UICorner"
 AutoCompleteCorner.Parent = AutoComplete
 
 AutoCompleteLayout = Instance.new("UIListLayout")
-AutoCompleteLayout.Padding = UDim.new(0, 8)
+AutoCompleteLayout.Padding = UDim.new(0, 4)
 AutoCompleteLayout.Archivable = true
 AutoCompleteLayout.Name = "UIListLayout"
 AutoCompleteLayout.Parent = AutoComplete
@@ -1366,17 +1367,17 @@ AutoCompletePadding = Instance.new("UIPadding")
 AutoCompletePadding.Archivable = true
 AutoCompletePadding.Name = "UIPadding"
 AutoCompletePadding.Parent = AutoComplete
-AutoCompletePadding.PaddingBottom = UDim.new(0, 8)
+AutoCompletePadding.PaddingBottom = UDim.new(0, 4)
 AutoCompletePadding.PaddingLeft = UDim.new(0, 8)
 AutoCompletePadding.PaddingRight = UDim.new(0, 8)
-AutoCompletePadding.PaddingTop = UDim.new(0, 8)
+AutoCompletePadding.PaddingTop = UDim.new(0, 4)
 
 AutoCompleteSizeConstraint = Instance.new("UISizeConstraint")
 AutoCompleteSizeConstraint.Archivable = true
 AutoCompleteSizeConstraint.Name = "UISizeConstraint"
 AutoCompleteSizeConstraint.Parent = AutoComplete
-AutoCompleteSizeConstraint.MaxSize = Vector2.new(200, 180)
-AutoCompleteSizeConstraint.MinSize = Vector2.new(0, 30)
+AutoCompleteSizeConstraint.MaxSize = Vector2.new(200, 140)
+AutoCompleteSizeConstraint.MinSize = Vector2.new(0, 0)
 
 AutoCompleteStroke = Instance.new("UIStroke")
 AutoCompleteStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -2026,6 +2027,20 @@ local ScreenGui = Matt
 local MenuStroke = UIStroke
 local CommandsListLayout = UIListLayout_v6
 local basePlaceholderText = Input.PlaceholderText
+autoCompleteSourceText = nil
+pendingAutoCompleteTabVersion = 0
+pendingAutoCompleteTabText = nil
+pendingAutoCompleteTabCursorPosition = nil
+autoCompleteTabCleanupVersion = 0
+autoCompleteTabCleanupText = nil
+autoCompleteTabCleanupCursorPosition = nil
+autoCompleteTabActionBound = false
+autoCompleteTextEditLockVersion = 0
+autoCompleteTabPressActive = false
+AUTOCOMPLETE_TAB_ACTION_NAME = "MattAutoCompleteTabAction"
+AUTOCOMPLETE_TAB_ACTION_PRIORITY = 10000
+lastInputText = Input.Text
+lastInputCursorPosition = Input.CursorPosition
 ActiveCommandCaption = CommandCaption:Clone()
 ActiveCommandCaption.Name = "ActiveCommandCaption"
 ActiveCommandCaption.Parent = Canvas
@@ -2103,7 +2118,7 @@ local toastConfig = {
 local didNotifyReady = false
 local updateListHeight = function() end
 
-local function clampNumber(value, minValue, maxValue)
+function clampNumber(value, minValue, maxValue)
 	if type(value) ~= "number" then
 		return nil
 	end
@@ -2111,7 +2126,7 @@ local function clampNumber(value, minValue, maxValue)
 	return math.clamp(value, minValue, maxValue)
 end
 
-local function getViewportSize()
+function getViewportSize()
 	local size = Canvas.AbsoluteSize
 	if size.X > 0 and size.Y > 0 then
 		return size
@@ -2125,7 +2140,7 @@ local function getViewportSize()
 	return Vector2.new(1280, 720)
 end
 
-local function getDeviceProfile(viewportSize)
+function getDeviceProfile(viewportSize)
 	local shortSide = math.min(viewportSize.X, viewportSize.Y)
 	if shortSide <= layoutCfg.phoneShortSide then
 		return "phone"
@@ -2138,19 +2153,19 @@ local function getDeviceProfile(viewportSize)
 	return "desktop"
 end
 
-local function getOpenMenuPosition()
+function getOpenMenuPosition()
 	return UDim2.fromScale(0.5, layoutCfg.openY)
 end
 
-local function getClosedMenuPosition()
+function getClosedMenuPosition()
 	return UDim2.new(0.5, 0, layoutCfg.openY, layoutCfg.closeYOffset)
 end
 
-local function getListPaddingHeight()
+function getListPaddingHeight()
 	return layoutCfg.listPadTop + layoutCfg.listPadBottom
 end
 
-local function cancelTween(tween)
+function cancelTween(tween)
 	if tween then
 		pcall(function()
 			tween:Cancel()
@@ -2158,7 +2173,7 @@ local function cancelTween(tween)
 	end
 end
 
-local function playTween(instance, tweenInfo, properties, completed)
+function playTween(instance, tweenInfo, properties, completed)
 	local tween = TweenService:Create(instance, tweenInfo, properties)
 	if completed then
 		local connection
@@ -2174,7 +2189,7 @@ local function playTween(instance, tweenInfo, properties, completed)
 	return tween
 end
 
-local function cancelEntryAnimations(entry)
+function cancelEntryAnimations(entry)
 	local tweens = activeEntryTweens[entry]
 	if not tweens then
 		return
@@ -2187,7 +2202,7 @@ local function cancelEntryAnimations(entry)
 	activeEntryTweens[entry] = nil
 end
 
-local function ensureEntryScale(entry)
+function ensureEntryScale(entry)
 	local scale = entry:FindFirstChild("EntryScale")
 	if scale and scale:IsA("UIScale") then
 		return scale
@@ -2201,7 +2216,7 @@ local function ensureEntryScale(entry)
 	return scale
 end
 
-local function collectEntryVisuals(entry)
+function collectEntryVisuals(entry)
 	if cachedEntryVisuals[entry] then
 		return cachedEntryVisuals[entry]
 	end
@@ -2244,7 +2259,7 @@ local function collectEntryVisuals(entry)
 	return visuals
 end
 
-local function setEntryVisible(entry, visible)
+function setEntryVisible(entry, visible)
 	cancelEntryAnimations(entry)
 	entry:SetAttribute("SuggestionRemoving", false)
 	entry:SetAttribute("SuggestionVisualState", visible and "visible" or "hidden")
@@ -2260,7 +2275,7 @@ local function setEntryVisible(entry, visible)
 	end
 end
 
-local function animateEntry(entry, visible, duration, completed)
+function animateEntry(entry, visible, duration, completed)
 	cancelEntryAnimations(entry)
 	entry:SetAttribute("SuggestionVisualState", visible and "animating-in" or "animating-out")
 	entry:SetAttribute("SuggestionRemoving", not visible)
@@ -2311,7 +2326,7 @@ local function animateEntry(entry, visible, duration, completed)
 	end
 end
 
-local function getRootScale()
+function getRootScale()
 	return math.max(UIScale.Scale, 0.001)
 end
 
@@ -2938,8 +2953,6 @@ function buildParameterAutoCompleteItems(context)
 		addNumberParameterSuggestions(items, seen, context)
 	elseif kind == "key" then
 		addKeyParameterSuggestions(items, seen, context)
-	else
-		addPlaceholderParameterSuggestion(items, seen, context)
 	end
 
 	return limitAutoCompleteItems(sortAutoCompleteItems(items))
@@ -3025,7 +3038,7 @@ function createAutoCompleteRow(item, index)
 	local row = Instance.new("TextButton")
 	row.Name = "AutoCompleteEntry"
 	row.AutoButtonColor = false
-	row.AutomaticSize = Enum.AutomaticSize.XY
+	row.AutomaticSize = Enum.AutomaticSize.X
 	row.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	row.BackgroundTransparency = 1
 	row.BorderSizePixel = 0
@@ -3070,6 +3083,7 @@ function hideAutoComplete(animate)
 	autoCompleteItems = {}
 	autoCompleteSelectedIndex = 1
 	autoCompleteVisible = false
+	autoCompleteSourceText = nil
 
 	cancelTween(autoCompleteFrameTween)
 	cancelTween(autoCompleteStrokeTween)
@@ -3132,6 +3146,7 @@ function renderAutoCompleteItems(items)
 	autoCompleteItems = items
 	autoCompleteSelectedIndex = 1
 	autoCompleteVisible = true
+	autoCompleteSourceText = Input.Text
 
 	cancelTween(autoCompleteFrameTween)
 	cancelTween(autoCompleteStrokeTween)
@@ -3217,6 +3232,10 @@ function acceptAutoComplete()
 		return false
 	end
 
+	if autoCompleteSourceText ~= Input.Text then
+		return false
+	end
+
 	local item = autoCompleteItems[autoCompleteSelectedIndex]
 	if not item then
 		return false
@@ -3228,6 +3247,7 @@ function acceptAutoComplete()
 	local before = string.sub(text, 1, tokenStart - 1)
 	local after = string.sub(text, tokenEnd)
 	local insertText = tostring(item.value or "")
+	local shouldSyncNextSection = item.appendSpace == true
 
 	if item.appendSpace and not startsWith(after, " ") then
 		insertText = insertText .. " "
@@ -3241,12 +3261,18 @@ function acceptAutoComplete()
 	Input.Text = nextText
 	suppressTextRender = false
 	Input.CursorPosition = #before + #insertText + 1
+	lastInputText = nextText
+	lastInputCursorPosition = Input.CursorPosition
 	renderCurrentState(false)
 
 	task.defer(function()
 		if isOpen and not isClosing then
 			Input:CaptureFocus()
 			isFocused = true
+			if shouldSyncNextSection and Input.Text == nextText then
+				autoCompleteSuppressText = nil
+				syncAutoComplete()
+			end
 		end
 	end)
 
@@ -3257,7 +3283,347 @@ function acceptAutoComplete()
 	return true
 end
 
-local function updateTouchButtonVisibility()
+function restoreAutoCompleteTextEditing(version)
+	if version and version ~= autoCompleteTextEditLockVersion then
+		return
+	end
+
+	Input.TextEditable = true
+	if isOpen and not isClosing and isFocused and UserInputService:GetFocusedTextBox() ~= Input then
+		Input:CaptureFocus()
+	end
+end
+
+function lockAutoCompleteTextEditing()
+	autoCompleteTextEditLockVersion = autoCompleteTextEditLockVersion + 1
+	local version = autoCompleteTextEditLockVersion
+	Input.TextEditable = false
+
+	task.delay(0.45, function()
+		restoreAutoCompleteTextEditing(version)
+	end)
+
+	return version
+end
+
+function releaseAutoCompleteTabPress()
+	autoCompleteTabPressActive = false
+	restoreAutoCompleteTextEditing()
+end
+
+function acceptAutoCompleteOnTab()
+	if not isOpen or isClosing or not isFocused or UserInputService:GetFocusedTextBox() ~= Input then
+		return false
+	end
+
+	if autoCompleteTabPressActive then
+		return true
+	end
+
+	autoCompleteTabPressActive = true
+	lockAutoCompleteTextEditing()
+	pendingAutoCompleteTabVersion = pendingAutoCompleteTabVersion + 1
+	local version = pendingAutoCompleteTabVersion
+	pendingAutoCompleteTabText = Input.Text
+	pendingAutoCompleteTabCursorPosition = Input.CursorPosition
+	autoCompleteConsumeFocusLost = autoCompleteVisible and #autoCompleteItems > 0
+
+	task.defer(function()
+		finishPendingAutoCompleteTab(version, Input.Text)
+	end)
+
+	task.delay(0.45, function()
+		if autoCompleteTabPressActive then
+			releaseAutoCompleteTabPress()
+		end
+	end)
+
+	return true
+end
+
+function handleAutoCompleteTabAction(_actionName, inputState, _inputObject)
+	if not isOpen or isClosing or not isFocused or UserInputService:GetFocusedTextBox() ~= Input then
+		return Enum.ContextActionResult.Pass
+	end
+
+	if inputState == Enum.UserInputState.Begin then
+		acceptAutoCompleteOnTab()
+	elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+		releaseAutoCompleteTabPress()
+	end
+
+	return Enum.ContextActionResult.Sink
+end
+
+function bindAutoCompleteTabAction()
+	if autoCompleteTabActionBound then
+		return
+	end
+
+	autoCompleteTabActionBound = true
+	local ok = pcall(function()
+		ContextActionService:BindActionAtPriority(
+			AUTOCOMPLETE_TAB_ACTION_NAME,
+			handleAutoCompleteTabAction,
+			false,
+			AUTOCOMPLETE_TAB_ACTION_PRIORITY,
+			Enum.KeyCode.Tab
+		)
+	end)
+
+	if not ok then
+		autoCompleteTabActionBound = false
+	end
+end
+
+function unbindAutoCompleteTabAction()
+	if not autoCompleteTabActionBound then
+		return
+	end
+
+	autoCompleteTabActionBound = false
+	pcall(function()
+		ContextActionService:UnbindAction(AUTOCOMPLETE_TAB_ACTION_NAME)
+	end)
+	releaseAutoCompleteTabPress()
+end
+
+function clearPendingAutoCompleteTab(version)
+	if version and version ~= pendingAutoCompleteTabVersion then
+		return
+	end
+
+	pendingAutoCompleteTabText = nil
+	pendingAutoCompleteTabCursorPosition = nil
+end
+
+function clearAutoCompleteTabCleanup(version)
+	if version and version ~= autoCompleteTabCleanupVersion then
+		return
+	end
+
+	autoCompleteTabCleanupText = nil
+	autoCompleteTabCleanupCursorPosition = nil
+end
+
+function armAutoCompleteTabCleanup(text, cursorPosition)
+	autoCompleteTabCleanupVersion = autoCompleteTabCleanupVersion + 1
+	local version = autoCompleteTabCleanupVersion
+	autoCompleteTabCleanupText = text or ""
+	autoCompleteTabCleanupCursorPosition = cursorPosition or (#autoCompleteTabCleanupText + 1)
+
+	task.delay(1, function()
+		clearAutoCompleteTabCleanup(version)
+	end)
+end
+
+function getInsertedText(previousText, nextText)
+	if #nextText <= #previousText then
+		return nil
+	end
+
+	local prefixLength = 0
+	local maxPrefix = math.min(#previousText, #nextText)
+	while prefixLength < maxPrefix do
+		local nextIndex = prefixLength + 1
+		if string.sub(previousText, nextIndex, nextIndex) ~= string.sub(nextText, nextIndex, nextIndex) then
+			break
+		end
+		prefixLength = nextIndex
+	end
+
+	local suffixLength = 0
+	local remainingPrevious = #previousText - prefixLength
+	local remainingNext = #nextText - prefixLength
+	while suffixLength < remainingPrevious and suffixLength < remainingNext do
+		local previousIndex = #previousText - suffixLength
+		local nextIndex = #nextText - suffixLength
+		if string.sub(previousText, previousIndex, previousIndex) ~= string.sub(nextText, nextIndex, nextIndex) then
+			break
+		end
+		suffixLength = suffixLength + 1
+	end
+
+	return string.sub(nextText, prefixLength + 1, #nextText - suffixLength)
+end
+
+function isTabWhitespaceInsert(insertedText)
+	if not insertedText or insertedText == "" then
+		return false
+	end
+
+	if string.find(insertedText, "\t", 1, true) then
+		return true
+	end
+
+	return #insertedText > 1 and string.match(insertedText, "^%s+$") ~= nil
+end
+
+function getChangedText(previousText, nextText)
+	previousText = previousText or ""
+	nextText = nextText or ""
+
+	local prefixLength = 0
+	local maxPrefix = math.min(#previousText, #nextText)
+	while prefixLength < maxPrefix do
+		local nextIndex = prefixLength + 1
+		if string.sub(previousText, nextIndex, nextIndex) ~= string.sub(nextText, nextIndex, nextIndex) then
+			break
+		end
+		prefixLength = nextIndex
+	end
+
+	local suffixLength = 0
+	local remainingPrevious = #previousText - prefixLength
+	local remainingNext = #nextText - prefixLength
+	while suffixLength < remainingPrevious and suffixLength < remainingNext do
+		local previousIndex = #previousText - suffixLength
+		local nextIndex = #nextText - suffixLength
+		if string.sub(previousText, previousIndex, previousIndex) ~= string.sub(nextText, nextIndex, nextIndex) then
+			break
+		end
+		suffixLength = suffixLength + 1
+	end
+
+	return string.sub(previousText, prefixLength + 1, #previousText - suffixLength), string.sub(nextText, prefixLength + 1, #nextText - suffixLength)
+end
+
+function isTabWhitespaceMutation(previousText, nextText)
+	if isTabWhitespaceInsert(getInsertedText(previousText or "", nextText or "")) then
+		return true
+	end
+
+	local previousChanged, nextChanged = getChangedText(previousText or "", nextText or "")
+	if previousChanged == nextChanged then
+		return false
+	end
+
+	if string.find(nextChanged, "\t", 1, true) then
+		return true
+	end
+
+	return string.match(previousChanged, "^%s*$") ~= nil
+		and string.match(nextChanged, "^%s+$") ~= nil
+		and #nextChanged > #previousChanged
+end
+
+function sanitizeInputTabCharacters(nextText)
+	if not string.find(nextText or "", "\t", 1, true) then
+		return false
+	end
+
+	local cursor = Input.CursorPosition
+	if type(cursor) ~= "number" or cursor < 1 then
+		cursor = #(nextText or "") + 1
+	end
+
+	local beforeCursor = string.sub(nextText or "", 1, math.max(0, cursor - 1))
+	local cleanText = string.gsub(nextText or "", "\t", "")
+	local cleanBeforeCursor = string.gsub(beforeCursor, "\t", "")
+
+	suppressTextRender = true
+	Input.Text = cleanText
+	Input.CursorPosition = math.clamp(#cleanBeforeCursor + 1, 1, #cleanText + 1)
+	suppressTextRender = false
+	lastInputText = cleanText
+	lastInputCursorPosition = Input.CursorPosition
+	autoCompleteSuppressText = nil
+	renderCurrentState(false)
+	return true
+end
+
+function handleAutoCompleteTextTab(nextText)
+	if pendingAutoCompleteTabText == nil then
+		return false
+	end
+
+	if not isOpen or isClosing or not isFocused or UserInputService:GetFocusedTextBox() ~= Input then
+		clearPendingAutoCompleteTab()
+		return false
+	end
+
+	if not isTabWhitespaceMutation(pendingAutoCompleteTabText or "", nextText or "") then
+		return false
+	end
+
+	return finishPendingAutoCompleteTab(pendingAutoCompleteTabVersion, nextText)
+end
+
+function handleAutoCompleteTabCleanup(nextText)
+	if autoCompleteTabCleanupText == nil then
+		return false
+	end
+
+	if not isOpen or isClosing or not isFocused or UserInputService:GetFocusedTextBox() ~= Input then
+		clearAutoCompleteTabCleanup()
+		return false
+	end
+
+	if not isTabWhitespaceMutation(autoCompleteTabCleanupText or "", nextText or "") then
+		clearAutoCompleteTabCleanup()
+		return false
+	end
+
+	local text = autoCompleteTabCleanupText or ""
+	local cursorPosition = autoCompleteTabCleanupCursorPosition or (#text + 1)
+	clearAutoCompleteTabCleanup()
+
+	suppressTextRender = true
+	Input.Text = text
+	Input.CursorPosition = cursorPosition
+	suppressTextRender = false
+	lastInputText = text
+	lastInputCursorPosition = Input.CursorPosition
+	autoCompleteSuppressText = nil
+	renderCurrentState(false)
+	return true
+end
+
+function finishPendingAutoCompleteTab(version, nextText)
+	if version ~= pendingAutoCompleteTabVersion or pendingAutoCompleteTabText == nil then
+		return false
+	end
+
+	local snapshotText = pendingAutoCompleteTabText or ""
+	local snapshotCursor = pendingAutoCompleteTabCursorPosition or (#snapshotText + 1)
+	local hasTabMutation = isTabWhitespaceMutation(snapshotText, nextText or Input.Text or "")
+	clearPendingAutoCompleteTab(version)
+
+	if Input.Text ~= snapshotText then
+		if not hasTabMutation then
+			autoCompleteConsumeFocusLost = false
+			return false
+		end
+
+		-- Undo the Tab whitespace that some executors insert into TextBox.
+		suppressTextRender = true
+		Input.Text = snapshotText
+		Input.CursorPosition = snapshotCursor
+		suppressTextRender = false
+		lastInputText = snapshotText
+		lastInputCursorPosition = Input.CursorPosition
+	end
+
+	suppressTextRender = true
+	Input.CursorPosition = snapshotCursor
+	suppressTextRender = false
+
+	if autoCompleteVisible and #autoCompleteItems > 0 then
+		autoCompleteConsumeFocusLost = true
+		if acceptAutoComplete() then
+			armAutoCompleteTabCleanup(Input.Text, Input.CursorPosition)
+			return true
+		end
+	end
+
+	autoCompleteConsumeFocusLost = false
+	autoCompleteSuppressText = nil
+	armAutoCompleteTabCleanup(snapshotText, snapshotCursor)
+	renderCurrentState(false)
+	return true
+end
+
+function updateTouchButtonVisibility()
 	local shouldShow = mobileCfg.enabled
 		and mobileCfg.useFloatingButton
 		and UserInputService.TouchEnabled
@@ -3268,7 +3634,7 @@ local function updateTouchButtonVisibility()
 	OpenButton.Visible = shouldShow
 end
 
-local function refreshLayout(instant)
+function refreshLayout(instant)
 	if not behaviorCfg.responsive then
 		runtimeLayout.device = "desktop"
 		runtimeLayout.menuWidthScale = layoutCfg.widthScale
@@ -3324,7 +3690,7 @@ local function refreshLayout(instant)
 	updateListHeight(instant == true)
 end
 
-local function applyListHeight(height, instant)
+function applyListHeight(height, instant)
 	local listGoal = UDim2.new(1, 0, 0, height)
 	local menuGoal = UDim2.new(runtimeLayout.menuWidthScale, 0, 0, layoutCfg.barHeight + height)
 
@@ -3357,7 +3723,7 @@ updateListHeight = function(instant)
 	applyListHeight(visibleHeight, instant == true)
 end
 
-local function scheduleListHeightUpdate()
+function scheduleListHeightUpdate()
 	if pendingResize then
 		return
 	end
@@ -3369,7 +3735,7 @@ local function scheduleListHeightUpdate()
 	end)
 end
 
-local function setMenuVisualState(opened, instant, completed)
+function setMenuVisualState(opened, instant, completed)
 	cancelTween(menuStateTween)
 	cancelTween(menuStrokeTween)
 	cancelTween(dividerTween)
@@ -3418,14 +3784,14 @@ local function setMenuVisualState(opened, instant, completed)
 	})
 end
 
-local function cancelInputTypewriter(restorePlaceholder)
+function cancelInputTypewriter(restorePlaceholder)
 	inputTypewriterVersion = inputTypewriterVersion + 1
 	if restorePlaceholder then
 		Input.PlaceholderText = basePlaceholderText
 	end
 end
 
-local function playPlaceholderTypewriterIn()
+function playPlaceholderTypewriterIn()
 	cancelInputTypewriter(false)
 
 	if not behaviorCfg.typewriterOpen then
@@ -3454,7 +3820,7 @@ local function playPlaceholderTypewriterIn()
 	end)
 end
 
-local function playInputTypewriterOut(onComplete)
+function playInputTypewriterOut(onComplete)
 	cancelInputTypewriter(false)
 
 	if not behaviorCfg.typewriterClose then
@@ -4401,8 +4767,11 @@ function finishClose(token)
 	cancelInputTypewriter(false)
 	hideAutoComplete(false)
 	hideCommandCaption()
+	unbindAutoCompleteTabAction()
 	suppressTextRender = true
 	Input.Text = ""
+	lastInputText = ""
+	lastInputCursorPosition = Input.CursorPosition
 	suppressTextRender = false
 	Input.PlaceholderText = ""
 	currentState = nil
@@ -4430,6 +4799,7 @@ function startClose()
 	isOpen = false
 	isFocused = false
 	isClosing = true
+	unbindAutoCompleteTabAction()
 	hideAutoComplete(true)
 	hideCommandCaption()
 	updateTouchButtonVisibility()
@@ -4829,6 +5199,8 @@ function library:SetText(text)
 	cancelInputTypewriter(true)
 	suppressTextRender = true
 	Input.Text = text or ""
+	lastInputText = Input.Text
+	lastInputCursorPosition = Input.CursorPosition
 	suppressTextRender = false
 	if isOpen and not isClosing then
 		renderCurrentState(false)
@@ -5265,6 +5637,8 @@ function library:Open(prefillText, waitForKeyCode)
 
 	suppressTextRender = true
 	Input.Text = prefillText ~= nil and tostring(prefillText) or ""
+	lastInputText = Input.Text
+	lastInputCursorPosition = Input.CursorPosition
 	suppressTextRender = false
 	Input.PlaceholderText = Input.Text == "" and "" or basePlaceholderText
 
@@ -5286,6 +5660,7 @@ function library:Open(prefillText, waitForKeyCode)
 
 		Input:CaptureFocus()
 		isFocused = true
+		bindAutoCompleteTabAction()
 		if Input.Text == "" then
 			playPlaceholderTypewriterIn()
 		end
@@ -5332,6 +5707,8 @@ function library:ClearText()
 	cancelInputTypewriter(true)
 	suppressTextRender = true
 	Input.Text = ""
+	lastInputText = ""
+	lastInputCursorPosition = Input.CursorPosition
 	suppressTextRender = false
 	if isOpen and not isClosing then
 		renderCurrentState(false)
@@ -5374,6 +5751,7 @@ function library:Destroy()
 	end
 	hideAutoComplete(false)
 	hideCommandCaption()
+	unbindAutoCompleteTabAction()
 	destroySuggestionEntries()
 	cancelTween(menuStateTween)
 	cancelTween(menuStrokeTween)
@@ -5428,8 +5806,22 @@ connections[#connections + 1] = Input:GetPropertyChangedSignal("Text"):Connect(f
 		return
 	end
 
+	if sanitizeInputTabCharacters(Input.Text) then
+		return
+	end
+
+	if handleAutoCompleteTextTab(Input.Text) then
+		return
+	end
+
+	if handleAutoCompleteTabCleanup(Input.Text) then
+		return
+	end
+
 	cancelInputTypewriter(true)
 	renderCurrentState(false)
+	lastInputText = Input.Text
+	lastInputCursorPosition = Input.CursorPosition
 end)
 
 connections[#connections + 1] = Input:GetPropertyChangedSignal("CursorPosition"):Connect(function()
@@ -5439,15 +5831,20 @@ connections[#connections + 1] = Input:GetPropertyChangedSignal("CursorPosition")
 
 	syncAutoComplete()
 	updateAutoCompletePosition()
+	lastInputCursorPosition = Input.CursorPosition
 end)
 
 connections[#connections + 1] = Input.Focused:Connect(function()
 	isFocused = true
+	bindAutoCompleteTabAction()
+	lastInputText = Input.Text
+	lastInputCursorPosition = Input.CursorPosition
 	syncAutoComplete()
 end)
 
 connections[#connections + 1] = Input.FocusLost:Connect(function(enterPressed, inputObject)
 	isFocused = false
+	unbindAutoCompleteTabAction()
 
 	if enterPressed and autoCompleteVisible and #autoCompleteItems > 0 then
 		autoCompleteConsumeFocusLost = true
@@ -5488,6 +5885,14 @@ connections[#connections + 1] = UserInputService.InputBegan:Connect(function(inp
 		return
 	end
 
+	-- Executor-safe Tab handling: prevent whitespace insertion and accept AutoComplete.
+	if input.KeyCode == Enum.KeyCode.Tab and isOpen and isFocused then
+		if acceptAutoCompleteOnTab() then
+			return
+		end
+	end
+
+	-- Keep selection keys responsive while autocomplete is open.
 	if isOpen and isFocused and autoCompleteVisible then
 		if input.KeyCode == Enum.KeyCode.Down then
 			moveAutoCompleteSelection(1)
@@ -5499,10 +5904,7 @@ connections[#connections + 1] = UserInputService.InputBegan:Connect(function(inp
 			return
 		end
 
-		if input.KeyCode == Enum.KeyCode.Tab
-			or input.KeyCode == Enum.KeyCode.Return
-			or input.KeyCode == Enum.KeyCode.KeypadEnter
-		then
+		if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
 			autoCompleteConsumeFocusLost = true
 			if acceptAutoComplete() then
 				return
@@ -5534,6 +5936,12 @@ connections[#connections + 1] = UserInputService.InputBegan:Connect(function(inp
 	end
 
 	library:Open("", input.KeyCode)
+end)
+
+connections[#connections + 1] = UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Tab then
+		releaseAutoCompleteTabPress()
+	end
 end)
 
 connections[#connections + 1] = OpenButton.MouseButton1Click:Connect(function()
