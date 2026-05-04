@@ -781,7 +781,7 @@ local function analyzeAgainstCommands(text, commands, byName, byAlias)
 		trimmed = string.sub(trimmed, 2)
 	end
 
-	local tokens: { string?}, trailingSpace = tokenize(trimmed)
+	local tokens, trailingSpace = tokenize(trimmed)
 	local commandToken = tokens[1] or ""
 
 	if commandToken == "" then
@@ -2668,23 +2668,44 @@ local function getSpecSuggestionSource(spec, partial, command)
 end
 
 local function readSuggestionValue(raw)
-	if type(raw) == "table" then
-		local value = raw.value or raw.Value or raw.name or raw.Name or raw[1]
-		if value == nil then
-			return nil
-		end
-
-		return tostring(value),
-			tostring(raw.label or raw.Label or raw.title or raw.Title or value),
-			tostring(raw.caption or raw.Caption or raw.description or raw.Description or ""),
-			raw.appendSyntax ~= false
-	end
-
 	if raw == nil then
 		return nil
 	end
 
-	return tostring(raw), tostring(raw), "", true
+	if type(raw) ~= "table" then
+		local text = tostring(raw)
+		return text, text, "", true
+	end
+
+	local value = raw.value
+	if value == nil then value = raw.Value end
+	if value == nil then value = raw.name end
+	if value == nil then value = raw.Name end
+	if value == nil then value = raw[1] end
+	if value == nil then
+		return nil
+	end
+
+	local label = raw.label
+	if label == nil then label = raw.Label end
+	if label == nil then label = raw.title end
+	if label == nil then label = raw.Title end
+	if label == nil then label = value end
+
+	local caption = raw.caption
+	if caption == nil then caption = raw.Caption end
+	if caption == nil then caption = raw.description end
+	if caption == nil then caption = raw.Description end
+	if caption == nil then caption = "" end
+
+	local appendSyntax = raw.appendSyntax
+	if appendSyntax == nil then
+		appendSyntax = true
+	else
+		appendSyntax = appendSyntax ~= false
+	end
+
+	return tostring(value), tostring(label), tostring(caption), appendSyntax
 end
 
 local function buildCommandAutoCompleteItems(context)
@@ -2695,6 +2716,7 @@ local function buildCommandAutoCompleteItems(context)
 
 	local items = {}
 	local seen = {}
+	local loweredQuery = toLower(query)
 
 	for _, command in ipairs(registry) do
 		local bestScore = scoreTextCandidate(command.name, query)
@@ -2720,11 +2742,40 @@ local function buildCommandAutoCompleteItems(context)
 	end
 
 	sortAutoCompleteItems(items)
-	if #items == 1 and toLower(items[1].value) == toLower(query) then
+	if #items == 1 and toLower(items[1].value) == loweredQuery then
 		return {}
 	end
 
 	return limitAutoCompleteItems(items)
+end
+
+local function addOneCustomParameterSuggestion(items, seen, context, raw)
+	local value, label, caption, appendSyntax = readSuggestionValue(raw)
+	if not value then
+		return
+	end
+
+	local partial = context.partial or ""
+	local score = scoreTextCandidate(value, partial) or scoreTextCandidate(label, partial)
+	if not score then
+		return
+	end
+
+	local effectiveCaption = caption
+	if effectiveCaption == "" then
+		effectiveCaption = tostring(context.spec.caption or "")
+	end
+
+	pushAutoCompleteItem(items, seen, {
+		mode = "parameters",
+		label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, appendSyntax),
+		value = value,
+		caption = effectiveCaption,
+		score = score,
+		tokenStart = context.tokenStart,
+		tokenEnd = context.tokenEnd,
+		appendSpace = context.argumentIndex < #context.syntax,
+	})
 end
 
 local function addCustomParameterSuggestions(items, seen, context, source)
@@ -2733,47 +2784,35 @@ local function addCustomParameterSuggestions(items, seen, context, source)
 	end
 
 	for _, raw in ipairs(source) do
-		local value, label, caption, appendSyntax = readSuggestionValue(raw)
-		if value then
-			local valueScore = scoreTextCandidate(value, context.partial)
-			local labelScore = scoreTextCandidate(label, context.partial)
-			local score = valueScore or labelScore
-			if score then
-				pushAutoCompleteItem(items, seen, {
-					mode = "parameters",
-					label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, appendSyntax),
-					value = value,
-					caption = caption ~= "" and caption or (context.spec.caption or ""),
-					score = score,
-					tokenStart = context.tokenStart,
-					tokenEnd = context.tokenEnd,
-					appendSpace = context.argumentIndex < #context.syntax,
-				})
-			end
-		end
+		addOneCustomParameterSuggestion(items, seen, context, raw)
 	end
 end
 
 local function addPlayerParameterSuggestions(items, seen, context)
-	for _, player in ipairs(listPlayers(context.partial or "")) do
-		local label = player.DisplayName
-		if player.DisplayName ~= player.Name then
-			label = player.DisplayName .. " @" .. player.Name
+	local partial = context.partial or ""
+	local players = listPlayers(partial)
+	for _, player in ipairs(players) do
+		local displayName = player.DisplayName
+		local userName = player.Name
+		local label = displayName
+		if displayName ~= userName then
+			label = displayName .. " @" .. userName
 		end
 
+		local score = scoreTextCandidate(userName, partial) or scoreTextCandidate(displayName, partial) or 1000
 		pushAutoCompleteItem(items, seen, {
 			mode = "parameters",
 			label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, false),
-			value = player.Name,
-			caption = "@" .. player.Name,
-			score = scoreTextCandidate(player.Name, context.partial) or scoreTextCandidate(player.DisplayName, context.partial) or 1000,
+			value = userName,
+			caption = "@" .. userName,
+			score = score,
 			tokenStart = context.tokenStart,
 			tokenEnd = context.tokenEnd,
 			appendSpace = context.argumentIndex < #context.syntax,
 		})
 
 		if #items >= AUTOCOMPLETE_LIMIT then
-			break
+			return
 		end
 	end
 end

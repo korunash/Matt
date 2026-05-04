@@ -17,7 +17,9 @@ The goal is simple: load a file, register your commands, and let the library tak
 If you're looking for a clean and easy-to-use interface from a executor script, this is the ideal solution:
 
 ```lua
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))()
+local chunk, err = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))
+assert(chunk, err)
+local library = chunk()
 
 library:Command({
 	name = "speed",
@@ -41,7 +43,9 @@ library:Command({
 ### 1. Load the library
 
 ```lua
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))()
+local chunk, err = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))
+assert(chunk, err)
+local library = chunk()
 ```
 
 ### 2. Configure the basics
