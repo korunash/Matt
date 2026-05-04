@@ -1309,7 +1309,7 @@ Divider.Selectable = false
 Divider.SelectionGroup = false
 Divider.SelectionOrder = 0
 
-local AutoComplete = Instance.new("Frame")
+AutoComplete = Instance.new("Frame")
 AutoComplete.SelectionImageObject = nil
 AutoComplete.Archivable = true
 AutoComplete.Active = false
@@ -1342,13 +1342,13 @@ AutoComplete.Selectable = false
 AutoComplete.SelectionGroup = false
 AutoComplete.SelectionOrder = 0
 
-local AutoCompleteCorner = Instance.new("UICorner")
+AutoCompleteCorner = Instance.new("UICorner")
 AutoCompleteCorner.CornerRadius = UDim.new(0, 4)
 AutoCompleteCorner.Archivable = true
 AutoCompleteCorner.Name = "UICorner"
 AutoCompleteCorner.Parent = AutoComplete
 
-local AutoCompleteLayout = Instance.new("UIListLayout")
+AutoCompleteLayout = Instance.new("UIListLayout")
 AutoCompleteLayout.Padding = UDim.new(0, 8)
 AutoCompleteLayout.Archivable = true
 AutoCompleteLayout.Name = "UIListLayout"
@@ -1362,7 +1362,7 @@ AutoCompleteLayout.ItemLineAlignment = Enum.ItemLineAlignment.Center
 AutoCompleteLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 AutoCompleteLayout.VerticalFlex = Enum.UIFlexAlignment.None
 
-local AutoCompletePadding = Instance.new("UIPadding")
+AutoCompletePadding = Instance.new("UIPadding")
 AutoCompletePadding.Archivable = true
 AutoCompletePadding.Name = "UIPadding"
 AutoCompletePadding.Parent = AutoComplete
@@ -1371,14 +1371,14 @@ AutoCompletePadding.PaddingLeft = UDim.new(0, 8)
 AutoCompletePadding.PaddingRight = UDim.new(0, 8)
 AutoCompletePadding.PaddingTop = UDim.new(0, 8)
 
-local AutoCompleteSizeConstraint = Instance.new("UISizeConstraint")
+AutoCompleteSizeConstraint = Instance.new("UISizeConstraint")
 AutoCompleteSizeConstraint.Archivable = true
 AutoCompleteSizeConstraint.Name = "UISizeConstraint"
 AutoCompleteSizeConstraint.Parent = AutoComplete
 AutoCompleteSizeConstraint.MaxSize = Vector2.new(200, 180)
 AutoCompleteSizeConstraint.MinSize = Vector2.new(0, 30)
 
-local AutoCompleteStroke = Instance.new("UIStroke")
+AutoCompleteStroke = Instance.new("UIStroke")
 AutoCompleteStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 AutoCompleteStroke.BorderOffset = UDim.new(0, 0)
 AutoCompleteStroke.BorderStrokePosition = Enum.BorderStrokePosition.Outer
@@ -1828,7 +1828,7 @@ UICorner_v2.Archivable = true
 UICorner_v2.Name = "UICorner"
 UICorner_v2.Parent = Avatar
 
-local CommandCaption = Instance.new("Frame")
+CommandCaption = Instance.new("Frame")
 CommandCaption.SelectionImageObject = nil
 CommandCaption.Archivable = true
 CommandCaption.Active = false
@@ -1861,14 +1861,14 @@ CommandCaption.Selectable = false
 CommandCaption.SelectionGroup = false
 CommandCaption.SelectionOrder = 0
 
-local CommandCaptionSizeConstraint = Instance.new("UISizeConstraint")
+CommandCaptionSizeConstraint = Instance.new("UISizeConstraint")
 CommandCaptionSizeConstraint.Archivable = true
 CommandCaptionSizeConstraint.Name = "UISizeConstraint"
 CommandCaptionSizeConstraint.Parent = CommandCaption
 CommandCaptionSizeConstraint.MaxSize = Vector2.new(700, 50)
 CommandCaptionSizeConstraint.MinSize = Vector2.new(0, 0)
 
-local CommandCaptionStroke = Instance.new("UIStroke")
+CommandCaptionStroke = Instance.new("UIStroke")
 CommandCaptionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 CommandCaptionStroke.BorderOffset = UDim.new(0, 0)
 CommandCaptionStroke.BorderStrokePosition = Enum.BorderStrokePosition.Outer
@@ -1883,7 +1883,7 @@ CommandCaptionStroke.Enabled = true
 CommandCaptionStroke.Name = "UIStroke"
 CommandCaptionStroke.Parent = CommandCaption
 
-local CommandCaptionLabel = Instance.new("TextLabel")
+CommandCaptionLabel = Instance.new("TextLabel")
 CommandCaptionLabel.SelectionImageObject = nil
 CommandCaptionLabel.Archivable = true
 CommandCaptionLabel.Active = false
@@ -1934,7 +1934,7 @@ CommandCaptionLabel.TextWrapped = true
 CommandCaptionLabel.TextXAlignment = Enum.TextXAlignment.Left
 CommandCaptionLabel.TextYAlignment = Enum.TextYAlignment.Top
 
-local CommandCaptionPadding = Instance.new("UIPadding")
+CommandCaptionPadding = Instance.new("UIPadding")
 CommandCaptionPadding.Archivable = true
 CommandCaptionPadding.Name = "UIPadding"
 CommandCaptionPadding.Parent = CommandCaptionLabel
@@ -2026,7 +2026,7 @@ local ScreenGui = Matt
 local MenuStroke = UIStroke
 local CommandsListLayout = UIListLayout_v6
 local basePlaceholderText = Input.PlaceholderText
-local ActiveCommandCaption = CommandCaption:Clone()
+ActiveCommandCaption = CommandCaption:Clone()
 ActiveCommandCaption.Name = "ActiveCommandCaption"
 ActiveCommandCaption.Parent = Canvas
 ActiveCommandCaption.Visible = false
@@ -2315,24 +2315,24 @@ local function getRootScale()
 	return math.max(UIScale.Scale, 0.001)
 end
 
-local function applyMontserratSemiBold(textObject)
+function applyMontserratSemiBold(textObject)
 	pcall(function()
 		textObject.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
 	end)
 end
 
-local function getCaptionLabel()
+function getCaptionLabel()
 	return ActiveCommandCaption:FindFirstChild("TextLabel")
 end
 
-local function stopCaptionPositioning()
+function stopCaptionPositioning()
 	if captionPositionConnection then
 		captionPositionConnection:Disconnect()
 		captionPositionConnection = nil
 	end
 end
 
-local function updateCommandCaptionPosition()
+function updateCommandCaptionPosition()
 	if not ActiveCommandCaption.Visible then
 		return
 	end
@@ -2351,7 +2351,7 @@ local function updateCommandCaptionPosition()
 	ActiveCommandCaption.Position = UDim2.fromOffset(math.floor(x + 0.5), math.floor(y + 0.5))
 end
 
-local function hideCommandCaption(source)
+function hideCommandCaption(source)
 	if source and captionSource ~= source then
 		return
 	end
@@ -2362,7 +2362,7 @@ local function hideCommandCaption(source)
 	stopCaptionPositioning()
 end
 
-local function showCommandCaption(text, source)
+function showCommandCaption(text, source)
 	text = trim(text)
 	if text == "" then
 		hideCommandCaption(source)
@@ -2385,7 +2385,7 @@ local function showCommandCaption(text, source)
 	end
 end
 
-local function bindSuggestionHover(entry)
+function bindSuggestionHover(entry)
 	if entry:GetAttribute("CaptionHoverBound") == true then
 		return
 	end
@@ -2422,7 +2422,7 @@ local function bindSuggestionHover(entry)
 	end)
 end
 
-local function collectTextTokensWithBounds(text)
+function collectTextTokensWithBounds(text)
 	local tokens = {}
 	local searchIndex = 1
 
@@ -2443,7 +2443,7 @@ local function collectTextTokensWithBounds(text)
 	return tokens
 end
 
-local function getInputCursorPosition(text)
+function getInputCursorPosition(text)
 	local cursor = Input.CursorPosition
 	if type(cursor) ~= "number" or cursor < 1 then
 		cursor = #text + 1
@@ -2452,7 +2452,7 @@ local function getInputCursorPosition(text)
 	return math.clamp(cursor, 1, #text + 1)
 end
 
-local function getCurrentTokenContext(text)
+function getCurrentTokenContext(text)
 	local cursor = getInputCursorPosition(text)
 	local tokens = collectTextTokensWithBounds(text)
 	local currentToken = nil
@@ -2489,7 +2489,7 @@ local function getCurrentTokenContext(text)
 	}
 end
 
-local function getAutoCompleteContext(text)
+function getAutoCompleteContext(text)
 	local tokenContext = getCurrentTokenContext(text)
 	local tokens = tokenContext.tokens
 	local currentToken = tokenContext.currentToken
@@ -2540,7 +2540,7 @@ local function getAutoCompleteContext(text)
 	}
 end
 
-local function scoreTextCandidate(candidate, query)
+function scoreTextCandidate(candidate, query)
 	candidate = toLower(tostring(candidate or ""))
 	query = toLower(tostring(query or ""))
 
@@ -2577,7 +2577,7 @@ local function scoreTextCandidate(candidate, query)
 	return nil
 end
 
-local function pushAutoCompleteItem(items, seen, item)
+function pushAutoCompleteItem(items, seen, item)
 	local value = tostring(item.value or "")
 	if value == "" then
 		return
@@ -2592,7 +2592,7 @@ local function pushAutoCompleteItem(items, seen, item)
 	items[#items + 1] = item
 end
 
-local function sortAutoCompleteItems(items)
+function sortAutoCompleteItems(items)
 	table.sort(items, function(left, right)
 		if left.score ~= right.score then
 			return (left.score or 1000) < (right.score or 1000)
@@ -2604,7 +2604,7 @@ local function sortAutoCompleteItems(items)
 	return items
 end
 
-local function limitAutoCompleteItems(items)
+function limitAutoCompleteItems(items)
 	local limited = {}
 	for index, item in ipairs(items) do
 		if index > AUTOCOMPLETE_LIMIT then
@@ -2617,7 +2617,7 @@ local function limitAutoCompleteItems(items)
 	return limited
 end
 
-local function formatRemainingSyntax(syntax, argumentIndex)
+function formatRemainingSyntax(syntax, argumentIndex)
 	local parts = {}
 	for index = argumentIndex + 1, #syntax do
 		local spec = syntax[index]
@@ -2631,7 +2631,7 @@ local function formatRemainingSyntax(syntax, argumentIndex)
 	return table.concat(parts, " ")
 end
 
-local function formatParameterAutoCompleteLabel(value, syntax, argumentIndex, appendSyntax)
+function formatParameterAutoCompleteLabel(value, syntax, argumentIndex, appendSyntax)
 	local label = tostring(value or "")
 	if appendSyntax == false then
 		return label
@@ -2645,7 +2645,7 @@ local function formatParameterAutoCompleteLabel(value, syntax, argumentIndex, ap
 	return label .. " " .. remaining
 end
 
-local function getSpecSuggestionSource(spec, partial, command)
+function getSpecSuggestionSource(spec, partial, command)
 	local source = spec.suggestions
 	if type(source) ~= "function" then
 		return source
@@ -2667,7 +2667,7 @@ local function getSpecSuggestionSource(spec, partial, command)
 	return nil
 end
 
-local function readSuggestionValue(raw)
+function readSuggestionValue(raw)
 	if raw == nil then
 		return nil
 	end
@@ -2708,7 +2708,7 @@ local function readSuggestionValue(raw)
 	return tostring(value), tostring(label), tostring(caption), appendSyntax
 end
 
-local function buildCommandAutoCompleteItems(context)
+function buildCommandAutoCompleteItems(context)
 	local query = trim(context.partial or "")
 	if query == "" then
 		return {}
@@ -2749,11 +2749,11 @@ local function buildCommandAutoCompleteItems(context)
 	return limitAutoCompleteItems(items)
 end
 
-local function getSuggestionScore(value, label, partial)
+function getSuggestionScore(value, label, partial)
 	return scoreTextCandidate(value, partial) or scoreTextCandidate(label, partial)
 end
 
-local function getEffectiveSuggestionCaption(caption, fallback)
+function getEffectiveSuggestionCaption(caption, fallback)
 	if caption ~= "" then
 		return caption
 	end
@@ -2761,7 +2761,7 @@ local function getEffectiveSuggestionCaption(caption, fallback)
 	return tostring(fallback or "")
 end
 
-local function pushParameterSuggestion(items, seen, context, value, label, caption, appendSyntax, score)
+function pushParameterSuggestion(items, seen, context, value, label, caption, appendSyntax, score)
 	pushAutoCompleteItem(items, seen, {
 		mode = "parameters",
 		label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, appendSyntax),
@@ -2774,7 +2774,7 @@ local function pushParameterSuggestion(items, seen, context, value, label, capti
 	})
 end
 
-local function addOneCustomParameterSuggestion(items, seen, context, raw)
+function addOneCustomParameterSuggestion(items, seen, context, raw)
 	local value, label, caption, appendSyntax = readSuggestionValue(raw)
 	if not value then
 		return
@@ -2790,7 +2790,7 @@ local function addOneCustomParameterSuggestion(items, seen, context, raw)
 	pushParameterSuggestion(items, seen, context, value, label, effectiveCaption, appendSyntax, score)
 end
 
-local function addCustomParameterSuggestions(items, seen, context, source)
+function addCustomParameterSuggestions(items, seen, context, source)
 	if type(source) ~= "table" then
 		return
 	end
@@ -2800,7 +2800,7 @@ local function addCustomParameterSuggestions(items, seen, context, source)
 	end
 end
 
-local function addPlayerParameterSuggestions(items, seen, context)
+function addPlayerParameterSuggestions(items, seen, context)
 	local partial = context.partial or ""
 	local players = listPlayers(partial)
 	for _, player in ipairs(players) do
@@ -2829,7 +2829,7 @@ local function addPlayerParameterSuggestions(items, seen, context)
 	end
 end
 
-local function valueWithinSpecRange(value, spec)
+function valueWithinSpecRange(value, spec)
 	local numberValue = tonumber(value)
 	if not numberValue then
 		return false
@@ -2846,7 +2846,7 @@ local function valueWithinSpecRange(value, spec)
 	return true
 end
 
-local function addNumberParameterSuggestions(items, seen, context)
+function addNumberParameterSuggestions(items, seen, context)
 	local spec = context.spec
 	local candidates = {}
 
@@ -2880,7 +2880,7 @@ local function addNumberParameterSuggestions(items, seen, context)
 	end
 end
 
-local function addKeyParameterSuggestions(items, seen, context)
+function addKeyParameterSuggestions(items, seen, context)
 	for _, keyCode in ipairs(Enum.KeyCode:GetEnumItems()) do
 		if keyCode.Name ~= "Unknown" then
 			local display = getKeyCodeText(keyCode) or keyCode.Name
@@ -2901,7 +2901,7 @@ local function addKeyParameterSuggestions(items, seen, context)
 	end
 end
 
-local function addPlaceholderParameterSuggestion(items, seen, context)
+function addPlaceholderParameterSuggestion(items, seen, context)
 	local value = getCommandTag(context.spec)
 	if value == "" then
 		return
@@ -2924,7 +2924,7 @@ local function addPlaceholderParameterSuggestion(items, seen, context)
 	})
 end
 
-local function buildParameterAutoCompleteItems(context)
+function buildParameterAutoCompleteItems(context)
 	local items = {}
 	local seen = {}
 	local source = getSpecSuggestionSource(context.spec, context.partial or "", context.command)
@@ -2945,7 +2945,7 @@ local function buildParameterAutoCompleteItems(context)
 	return limitAutoCompleteItems(sortAutoCompleteItems(items))
 end
 
-local function getAutoCompleteRows()
+function getAutoCompleteRows()
 	local rows = {}
 	for _, child in ipairs(AutoComplete:GetChildren()) do
 		if child:IsA("GuiObject") and child:GetAttribute("AutoCompleteEntry") == true then
@@ -2960,7 +2960,7 @@ local function getAutoCompleteRows()
 	return rows
 end
 
-local function destroyAutoCompleteRow(row)
+function destroyAutoCompleteRow(row)
 	cancelEntryAnimations(row)
 	cachedEntryVisuals[row] = nil
 	if row and row.Parent ~= nil then
@@ -2968,13 +2968,13 @@ local function destroyAutoCompleteRow(row)
 	end
 end
 
-local function clearAutoCompleteRows()
+function clearAutoCompleteRows()
 	for _, row in ipairs(getAutoCompleteRows()) do
 		destroyAutoCompleteRow(row)
 	end
 end
 
-local function updateAutoCompleteSelection()
+function updateAutoCompleteSelection()
 	local rows = getAutoCompleteRows()
 	for _, row in ipairs(rows) do
 		local index = row:GetAttribute("AutoCompleteIndex")
@@ -2984,7 +2984,7 @@ local function updateAutoCompleteSelection()
 	end
 end
 
-local function updateAutoCompletePosition()
+function updateAutoCompletePosition()
 	if not AutoComplete.Visible then
 		return
 	end
@@ -3021,7 +3021,7 @@ local function updateAutoCompletePosition()
 	end)
 end
 
-local function createAutoCompleteRow(item, index)
+function createAutoCompleteRow(item, index)
 	local row = Instance.new("TextButton")
 	row.Name = "AutoCompleteEntry"
 	row.AutoButtonColor = false
@@ -3121,7 +3121,7 @@ function hideAutoComplete(animate)
 	end)
 end
 
-local function renderAutoCompleteItems(items)
+function renderAutoCompleteItems(items)
 	if #items == 0 then
 		hideAutoComplete(true)
 		return
