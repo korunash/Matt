@@ -2749,6 +2749,31 @@ local function buildCommandAutoCompleteItems(context)
 	return limitAutoCompleteItems(items)
 end
 
+local function getSuggestionScore(value, label, partial)
+	return scoreTextCandidate(value, partial) or scoreTextCandidate(label, partial)
+end
+
+local function getEffectiveSuggestionCaption(caption, fallback)
+	if caption ~= "" then
+		return caption
+	end
+
+	return tostring(fallback or "")
+end
+
+local function pushParameterSuggestion(items, seen, context, value, label, caption, appendSyntax, score)
+	pushAutoCompleteItem(items, seen, {
+		mode = "parameters",
+		label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, appendSyntax),
+		value = value,
+		caption = caption,
+		score = score,
+		tokenStart = context.tokenStart,
+		tokenEnd = context.tokenEnd,
+		appendSpace = context.argumentIndex < #context.syntax,
+	})
+end
+
 local function addOneCustomParameterSuggestion(items, seen, context, raw)
 	local value, label, caption, appendSyntax = readSuggestionValue(raw)
 	if not value then
@@ -2756,26 +2781,13 @@ local function addOneCustomParameterSuggestion(items, seen, context, raw)
 	end
 
 	local partial = context.partial or ""
-	local score = scoreTextCandidate(value, partial) or scoreTextCandidate(label, partial)
+	local score = getSuggestionScore(value, label, partial)
 	if not score then
 		return
 	end
 
-	local effectiveCaption = caption
-	if effectiveCaption == "" then
-		effectiveCaption = tostring(context.spec.caption or "")
-	end
-
-	pushAutoCompleteItem(items, seen, {
-		mode = "parameters",
-		label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, appendSyntax),
-		value = value,
-		caption = effectiveCaption,
-		score = score,
-		tokenStart = context.tokenStart,
-		tokenEnd = context.tokenEnd,
-		appendSpace = context.argumentIndex < #context.syntax,
-	})
+	local effectiveCaption = getEffectiveSuggestionCaption(caption, context.spec.caption)
+	pushParameterSuggestion(items, seen, context, value, label, effectiveCaption, appendSyntax, score)
 end
 
 local function addCustomParameterSuggestions(items, seen, context, source)
