@@ -2,6 +2,7 @@
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -9,13 +10,10 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local GuiParent = RunService:IsStudio() and PlayerGui or CoreGui
 
-for _, guiName in ipairs({ "CLI6", "CLI5" }) do
-	local existing = GuiParent:FindFirstChild(guiName)
-	if existing and existing:IsA("ScreenGui") then
-		existing:Destroy()
-	end
+local existing = GuiParent:FindFirstChild("Matt")
+if existing and existing:IsA("ScreenGui") then
+	existing:Destroy()
 end
-
 -- Theme
 local READY_COLOR = Color3.fromRGB(108, 214, 148)
 local ERROR_COLOR = Color3.fromRGB(255, 107, 107)
@@ -57,6 +55,16 @@ local TOAST_OFFSET = 18
 local TOAST_DURATION = 4
 local TOAST_ENTER_DURATION = 0.16
 local TOAST_EXIT_DURATION = 0.12
+local AUTOCOMPLETE_LIMIT = 7
+local AUTOCOMPLETE_SELECTED_COLOR = Color3.fromRGB(235, 235, 235)
+local AUTOCOMPLETE_IDLE_COLOR = Color3.fromRGB(128, 128, 128)
+local AUTOCOMPLETE_CURSOR_OFFSET_X = 6
+local AUTOCOMPLETE_CURSOR_OFFSET_Y = 4
+local CAPTION_CURSOR_OFFSET_X = 14
+local CAPTION_CURSOR_OFFSET_Y = 7
+local CAPTION_SCREEN_PADDING = 7
+local CAPTION_RIGHT_PADDING = 15
+local CAPTION_HOVER_DELAY = 0.18
 
 local layoutCfg = {
 	widthScale = MENU_WIDTH,
@@ -540,6 +548,15 @@ local function buildCommandDescription(command)
 	return (command.description or "") .. getAliasesText(command)
 end
 
+local function buildCommandCaption(command)
+	local caption = trim(tostring(command.caption or ""))
+	if caption ~= "" then
+		return caption
+	end
+
+	return buildCommandDescription(command)
+end
+
 local function cloneSyntax(syntax)
 	local cloned = {}
 
@@ -551,6 +568,8 @@ local function cloneSyntax(syntax)
 			required = spec.required,
 			min = spec.min,
 			max = spec.max,
+			caption = spec.caption or spec.description,
+			suggestions = spec.suggestions or spec.autocomplete or spec.values,
 		}
 	end
 
@@ -591,6 +610,7 @@ local function sanitizeCommandDefinition(rawCommand)
 		name = name,
 		aliases = normalizeAliases(rawCommand.aliases),
 		description = rawCommand.description or "",
+		caption = rawCommand.caption or rawCommand.Caption,
 		syntax = cloneSyntax(rawCommand.syntax),
 		execute = rawCommand.execute,
 	}
@@ -761,7 +781,7 @@ local function analyzeAgainstCommands(text, commands, byName, byAlias)
 		trimmed = string.sub(trimmed, 2)
 	end
 
-	local tokens, trailingSpace = tokenize(trimmed)
+	local tokens: { string?}, trailingSpace = tokenize(trimmed)
 	local commandToken = tokens[1] or ""
 
 	if commandToken == "" then
@@ -875,6 +895,7 @@ local function buildSuggestionDefinitions(state)
 				Key = "command:" .. toLower(command.name),
 				Title = buildCommandTitle(command),
 				Description = buildCommandDescription(command),
+				Caption = buildCommandCaption(command),
 				RichText = true,
 			}
 		end
@@ -892,6 +913,7 @@ local function buildSuggestionDefinitions(state)
 				DisplayName = player.DisplayName,
 				UserName = player.Name,
 				Player = player,
+				Caption = "@" .. player.Name,
 			}
 		end
 
@@ -926,26 +948,26 @@ local function buildSuggestionDefinitions(state)
 end
 
 -- UI
-local CLI6 = Instance.new("ScreenGui")
-CLI6.ClipToDeviceSafeArea = true
-CLI6.SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension
-CLI6.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
-CLI6.Archivable = true
-CLI6.DisplayOrder = 0
-CLI6.Enabled = true
-CLI6.IgnoreGuiInset = true
-CLI6.Name = "CLI6"
-CLI6.Parent = RunService:IsStudio() and PlayerGui or CoreGui
-CLI6.ResetOnSpawn = false
-CLI6.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-CLI6.AutoLocalize = true
-CLI6.RootLocalizationTable = nil
-CLI6.SelectionGroup = false
+local Matt = Instance.new("ScreenGui")
+Matt.ClipToDeviceSafeArea = true
+Matt.SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension
+Matt.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+Matt.Archivable = true
+Matt.DisplayOrder = 0
+Matt.Enabled = true
+Matt.IgnoreGuiInset = true
+Matt.Name = "Matt"
+Matt.Parent = RunService:IsStudio() and PlayerGui or CoreGui
+Matt.ResetOnSpawn = false
+Matt.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Matt.AutoLocalize = true
+Matt.RootLocalizationTable = nil
+Matt.SelectionGroup = false
 
 local UIScale = Instance.new("UIScale")
 UIScale.Archivable = true
 UIScale.Scale = 1
-UIScale.Parent = CLI6
+UIScale.Parent = Matt
 
 local Canvas = Instance.new("Frame")
 Canvas.SelectionImageObject = nil
@@ -961,7 +983,7 @@ Canvas.BorderSizePixel = 0
 Canvas.Interactable = true
 Canvas.LayoutOrder = 0
 Canvas.Name = "Canvas"
-Canvas.Parent = CLI6
+Canvas.Parent = Matt
 Canvas.Position = UDim2.fromScale(0.5, 0.5)
 Canvas.Rotation = 0
 Canvas.Size = UDim2.fromScale(1, 1)
@@ -1002,7 +1024,7 @@ CommandsMenu.SizeConstraint = Enum.SizeConstraint.RelativeXY
 CommandsMenu.Style = Enum.FrameStyle.Custom
 CommandsMenu.Visible = true
 CommandsMenu.ZIndex = 1
-CommandsMenu.ClipsDescendants = true
+CommandsMenu.ClipsDescendants = false
 CommandsMenu.AutoLocalize = true
 CommandsMenu.RootLocalizationTable = nil
 CommandsMenu.NextSelectionDown = nil
@@ -1287,6 +1309,90 @@ Divider.Selectable = false
 Divider.SelectionGroup = false
 Divider.SelectionOrder = 0
 
+local AutoComplete = Instance.new("Frame")
+AutoComplete.SelectionImageObject = nil
+AutoComplete.Archivable = true
+AutoComplete.Active = false
+AutoComplete.AnchorPoint = Vector2.new(0, 1)
+AutoComplete.AutomaticSize = Enum.AutomaticSize.XY
+AutoComplete.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+AutoComplete.BackgroundTransparency = 0.2
+AutoComplete.BorderColor3 = Color3.fromRGB(0, 0, 0)
+AutoComplete.BorderMode = Enum.BorderMode.Outline
+AutoComplete.BorderSizePixel = 0
+AutoComplete.Interactable = true
+AutoComplete.LayoutOrder = 0
+AutoComplete.Name = "AutoComplete"
+AutoComplete.Parent = CommandBar
+AutoComplete.Position = UDim2.fromOffset(58, -4)
+AutoComplete.Rotation = 0
+AutoComplete.Size = UDim2.fromOffset(0, 0)
+AutoComplete.SizeConstraint = Enum.SizeConstraint.RelativeXY
+AutoComplete.Style = Enum.FrameStyle.Custom
+AutoComplete.Visible = false
+AutoComplete.ZIndex = 20
+AutoComplete.ClipsDescendants = true
+AutoComplete.AutoLocalize = true
+AutoComplete.RootLocalizationTable = nil
+AutoComplete.NextSelectionDown = nil
+AutoComplete.NextSelectionLeft = nil
+AutoComplete.NextSelectionRight = nil
+AutoComplete.NextSelectionUp = nil
+AutoComplete.Selectable = false
+AutoComplete.SelectionGroup = false
+AutoComplete.SelectionOrder = 0
+
+local AutoCompleteCorner = Instance.new("UICorner")
+AutoCompleteCorner.CornerRadius = UDim.new(0, 4)
+AutoCompleteCorner.Archivable = true
+AutoCompleteCorner.Name = "UICorner"
+AutoCompleteCorner.Parent = AutoComplete
+
+local AutoCompleteLayout = Instance.new("UIListLayout")
+AutoCompleteLayout.Padding = UDim.new(0, 8)
+AutoCompleteLayout.Archivable = true
+AutoCompleteLayout.Name = "UIListLayout"
+AutoCompleteLayout.Parent = AutoComplete
+AutoCompleteLayout.FillDirection = Enum.FillDirection.Vertical
+AutoCompleteLayout.SortOrder = Enum.SortOrder.LayoutOrder
+AutoCompleteLayout.Wraps = false
+AutoCompleteLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+AutoCompleteLayout.HorizontalFlex = Enum.UIFlexAlignment.None
+AutoCompleteLayout.ItemLineAlignment = Enum.ItemLineAlignment.Center
+AutoCompleteLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+AutoCompleteLayout.VerticalFlex = Enum.UIFlexAlignment.None
+
+local AutoCompletePadding = Instance.new("UIPadding")
+AutoCompletePadding.Archivable = true
+AutoCompletePadding.Name = "UIPadding"
+AutoCompletePadding.Parent = AutoComplete
+AutoCompletePadding.PaddingBottom = UDim.new(0, 8)
+AutoCompletePadding.PaddingLeft = UDim.new(0, 8)
+AutoCompletePadding.PaddingRight = UDim.new(0, 8)
+AutoCompletePadding.PaddingTop = UDim.new(0, 8)
+
+local AutoCompleteSizeConstraint = Instance.new("UISizeConstraint")
+AutoCompleteSizeConstraint.Archivable = true
+AutoCompleteSizeConstraint.Name = "UISizeConstraint"
+AutoCompleteSizeConstraint.Parent = AutoComplete
+AutoCompleteSizeConstraint.MaxSize = Vector2.new(200, 180)
+AutoCompleteSizeConstraint.MinSize = Vector2.new(0, 30)
+
+local AutoCompleteStroke = Instance.new("UIStroke")
+AutoCompleteStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+AutoCompleteStroke.BorderOffset = UDim.new(0, 0)
+AutoCompleteStroke.BorderStrokePosition = Enum.BorderStrokePosition.Outer
+AutoCompleteStroke.Color = Color3.fromRGB(100, 100, 100)
+AutoCompleteStroke.LineJoinMode = Enum.LineJoinMode.Round
+AutoCompleteStroke.StrokeSizingMode = Enum.StrokeSizingMode.FixedSize
+AutoCompleteStroke.Thickness = 1.5
+AutoCompleteStroke.Transparency = 0.75
+AutoCompleteStroke.ZIndex = 5
+AutoCompleteStroke.Archivable = true
+AutoCompleteStroke.Enabled = true
+AutoCompleteStroke.Name = "UIStroke"
+AutoCompleteStroke.Parent = AutoComplete
+
 local CommandsList = Instance.new("ScrollingFrame")
 CommandsList.SelectionImageObject = nil
 CommandsList.Archivable = true
@@ -1339,7 +1445,7 @@ CommandsList.SelectionOrder = 0
 
 local Examples = Instance.new("Folder")
 Examples.Archivable = true
-Examples.Name = "Examples"
+Examples.Name = "Templates"
 Examples.Parent = CommandsList
 
 local CommandSugestion = Instance.new("Frame")
@@ -1722,6 +1828,121 @@ UICorner_v2.Archivable = true
 UICorner_v2.Name = "UICorner"
 UICorner_v2.Parent = Avatar
 
+local CommandCaption = Instance.new("Frame")
+CommandCaption.SelectionImageObject = nil
+CommandCaption.Archivable = true
+CommandCaption.Active = false
+CommandCaption.AnchorPoint = Vector2.new(0, 0)
+CommandCaption.AutomaticSize = Enum.AutomaticSize.XY
+CommandCaption.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+CommandCaption.BackgroundTransparency = 0.2
+CommandCaption.BorderColor3 = Color3.fromRGB(0, 0, 0)
+CommandCaption.BorderMode = Enum.BorderMode.Outline
+CommandCaption.BorderSizePixel = 0
+CommandCaption.Interactable = false
+CommandCaption.LayoutOrder = 0
+CommandCaption.Name = "CommandCaption"
+CommandCaption.Parent = Examples
+CommandCaption.Position = UDim2.fromOffset(0, 0)
+CommandCaption.Rotation = 0
+CommandCaption.Size = UDim2.fromOffset(0, 0)
+CommandCaption.SizeConstraint = Enum.SizeConstraint.RelativeXY
+CommandCaption.Style = Enum.FrameStyle.Custom
+CommandCaption.Visible = false
+CommandCaption.ZIndex = 60
+CommandCaption.ClipsDescendants = false
+CommandCaption.AutoLocalize = true
+CommandCaption.RootLocalizationTable = nil
+CommandCaption.NextSelectionDown = nil
+CommandCaption.NextSelectionLeft = nil
+CommandCaption.NextSelectionRight = nil
+CommandCaption.NextSelectionUp = nil
+CommandCaption.Selectable = false
+CommandCaption.SelectionGroup = false
+CommandCaption.SelectionOrder = 0
+
+local CommandCaptionSizeConstraint = Instance.new("UISizeConstraint")
+CommandCaptionSizeConstraint.Archivable = true
+CommandCaptionSizeConstraint.Name = "UISizeConstraint"
+CommandCaptionSizeConstraint.Parent = CommandCaption
+CommandCaptionSizeConstraint.MaxSize = Vector2.new(700, 50)
+CommandCaptionSizeConstraint.MinSize = Vector2.new(0, 0)
+
+local CommandCaptionStroke = Instance.new("UIStroke")
+CommandCaptionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+CommandCaptionStroke.BorderOffset = UDim.new(0, 0)
+CommandCaptionStroke.BorderStrokePosition = Enum.BorderStrokePosition.Outer
+CommandCaptionStroke.Color = Color3.fromRGB(0, 0, 0)
+CommandCaptionStroke.LineJoinMode = Enum.LineJoinMode.Round
+CommandCaptionStroke.StrokeSizingMode = Enum.StrokeSizingMode.FixedSize
+CommandCaptionStroke.Thickness = 2
+CommandCaptionStroke.Transparency = 0.75
+CommandCaptionStroke.ZIndex = 5
+CommandCaptionStroke.Archivable = true
+CommandCaptionStroke.Enabled = true
+CommandCaptionStroke.Name = "UIStroke"
+CommandCaptionStroke.Parent = CommandCaption
+
+local CommandCaptionLabel = Instance.new("TextLabel")
+CommandCaptionLabel.SelectionImageObject = nil
+CommandCaptionLabel.Archivable = true
+CommandCaptionLabel.Active = false
+CommandCaptionLabel.AnchorPoint = Vector2.new(0, 0)
+CommandCaptionLabel.AutomaticSize = Enum.AutomaticSize.XY
+CommandCaptionLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CommandCaptionLabel.BackgroundTransparency = 1
+CommandCaptionLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+CommandCaptionLabel.BorderMode = Enum.BorderMode.Outline
+CommandCaptionLabel.BorderSizePixel = 0
+CommandCaptionLabel.Interactable = false
+CommandCaptionLabel.LayoutOrder = 0
+CommandCaptionLabel.Name = "TextLabel"
+CommandCaptionLabel.Parent = CommandCaption
+CommandCaptionLabel.Position = UDim2.fromOffset(0, 0)
+CommandCaptionLabel.Rotation = 0
+CommandCaptionLabel.Size = UDim2.fromOffset(0, 0)
+CommandCaptionLabel.SizeConstraint = Enum.SizeConstraint.RelativeXY
+CommandCaptionLabel.Visible = true
+CommandCaptionLabel.ZIndex = 61
+CommandCaptionLabel.ClipsDescendants = false
+CommandCaptionLabel.AutoLocalize = true
+CommandCaptionLabel.RootLocalizationTable = nil
+CommandCaptionLabel.NextSelectionDown = nil
+CommandCaptionLabel.NextSelectionLeft = nil
+CommandCaptionLabel.NextSelectionRight = nil
+CommandCaptionLabel.NextSelectionUp = nil
+CommandCaptionLabel.Selectable = false
+CommandCaptionLabel.SelectionGroup = false
+CommandCaptionLabel.SelectionOrder = 0
+CommandCaptionLabel.Font = Enum.Font.GothamMedium
+pcall(function()
+	CommandCaptionLabel.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+end)
+CommandCaptionLabel.LineHeight = 1
+CommandCaptionLabel.MaxVisibleGraphemes = -1
+CommandCaptionLabel.RichText = false
+CommandCaptionLabel.Text = ""
+CommandCaptionLabel.TextColor3 = Color3.fromRGB(235, 235, 235)
+CommandCaptionLabel.TextDirection = Enum.TextDirection.Auto
+CommandCaptionLabel.TextScaled = false
+CommandCaptionLabel.TextSize = 12
+CommandCaptionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+CommandCaptionLabel.TextStrokeTransparency = 1
+CommandCaptionLabel.TextTransparency = 0
+CommandCaptionLabel.TextTruncate = Enum.TextTruncate.None
+CommandCaptionLabel.TextWrapped = true
+CommandCaptionLabel.TextXAlignment = Enum.TextXAlignment.Left
+CommandCaptionLabel.TextYAlignment = Enum.TextYAlignment.Top
+
+local CommandCaptionPadding = Instance.new("UIPadding")
+CommandCaptionPadding.Archivable = true
+CommandCaptionPadding.Name = "UIPadding"
+CommandCaptionPadding.Parent = CommandCaptionLabel
+CommandCaptionPadding.PaddingBottom = UDim.new(0, 7)
+CommandCaptionPadding.PaddingLeft = UDim.new(0, 7)
+CommandCaptionPadding.PaddingRight = UDim.new(0, 7)
+CommandCaptionPadding.PaddingTop = UDim.new(0, 7)
+
 local UIListLayout_v6 = Instance.new("UIListLayout")
 UIListLayout_v6.Padding = UDim.new(0, 16)
 UIListLayout_v6.Archivable = true
@@ -1761,7 +1982,7 @@ ToastLayer.AutomaticSize = Enum.AutomaticSize.Y
 ToastLayer.BackgroundTransparency = 1
 ToastLayer.BorderSizePixel = 0
 ToastLayer.Name = "ToastLayer"
-ToastLayer.Parent = CLI6
+ToastLayer.Parent = Matt
 ToastLayer.Position = UDim2.new(1, -layoutCfg.toastOffset, 0, layoutCfg.toastOffset)
 ToastLayer.Size = UDim2.new(0, layoutCfg.toastWidth, 0, 0)
 ToastLayer.Visible = true
@@ -1780,7 +2001,7 @@ OpenButton.AnchorPoint = Vector2.new(1, 1)
 OpenButton.AutoButtonColor = false
 OpenButton.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 OpenButton.BorderSizePixel = 0
-OpenButton.Parent = CLI6
+OpenButton.Parent = Matt
 OpenButton.Position = UDim2.new(1, -mobileCfg.buttonRight, 1, -mobileCfg.buttonBottom)
 OpenButton.Size = UDim2.fromOffset(mobileCfg.buttonSize, mobileCfg.buttonSize)
 OpenButton.Text = mobileCfg.buttonText
@@ -1801,13 +2022,19 @@ OpenButtonStroke.Thickness = 1
 OpenButtonStroke.Transparency = 0.55
 OpenButtonStroke.Parent = OpenButton
 
-local ScreenGui = CLI6
+local ScreenGui = Matt
 local MenuStroke = UIStroke
 local CommandsListLayout = UIListLayout_v6
 local basePlaceholderText = Input.PlaceholderText
+local ActiveCommandCaption = CommandCaption:Clone()
+ActiveCommandCaption.Name = "ActiveCommandCaption"
+ActiveCommandCaption.Parent = Canvas
+ActiveCommandCaption.Visible = false
 
 CommandsMenu.AutomaticSize = Enum.AutomaticSize.None
 CommandsList.AutomaticSize = Enum.AutomaticSize.None
+AutoComplete.BackgroundTransparency = 1
+AutoCompleteStroke.Transparency = 1
 
 function createCommandEntry()
 	local entry = CommandSugestion:Clone()
@@ -1829,6 +2056,17 @@ end
 local activeEntryTweens = setmetatable({}, { __mode = "k" })
 local cachedEntryVisuals = setmetatable({}, { __mode = "k" })
 local cachedAvatarImages = {}
+local autoCompleteItems = {}
+local autoCompleteSelectedIndex = 1
+local autoCompleteVisible = false
+local autoCompleteVersion = 0
+local autoCompleteSuppressText = nil
+local autoCompleteConsumeFocusLost = false
+local autoCompleteFrameTween = nil
+local autoCompleteStrokeTween = nil
+local captionHoverVersion = 0
+local captionSource = nil
+local captionPositionConnection = nil
 
 local registry = {}
 local registryByName = {}
@@ -1984,16 +2222,22 @@ local function collectEntryVisuals(entry)
 		end
 	end
 
-	for _, descendant in ipairs(entry:GetDescendants()) do
-		if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
-			register(descendant, "TextTransparency")
-			register(descendant, "TextStrokeTransparency")
-		elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
-			register(descendant, "ImageTransparency")
-			register(descendant, "BackgroundTransparency")
-		elseif descendant:IsA("UIStroke") then
-			register(descendant, "Transparency")
+	local function registerInstance(instance)
+		if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
+			register(instance, "TextTransparency")
+			register(instance, "TextStrokeTransparency")
+		elseif instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
+			register(instance, "ImageTransparency")
+			register(instance, "BackgroundTransparency")
+		elseif instance:IsA("UIStroke") then
+			register(instance, "Transparency")
 		end
+	end
+
+	registerInstance(entry)
+
+	for _, descendant in ipairs(entry:GetDescendants()) do
+		registerInstance(descendant)
 	end
 
 	cachedEntryVisuals[entry] = visuals
@@ -2069,6 +2313,897 @@ end
 
 local function getRootScale()
 	return math.max(UIScale.Scale, 0.001)
+end
+
+local function applyMontserratSemiBold(textObject)
+	pcall(function()
+		textObject.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+	end)
+end
+
+local function getCaptionLabel()
+	return ActiveCommandCaption:FindFirstChild("TextLabel")
+end
+
+local function stopCaptionPositioning()
+	if captionPositionConnection then
+		captionPositionConnection:Disconnect()
+		captionPositionConnection = nil
+	end
+end
+
+local function updateCommandCaptionPosition()
+	if not ActiveCommandCaption.Visible then
+		return
+	end
+
+	local scale = getRootScale()
+	local mouse = UserInputService:GetMouseLocation()
+	local canvasPosition = Canvas.AbsolutePosition
+	local canvasSize = Vector2.new(Canvas.AbsoluteSize.X / scale, Canvas.AbsoluteSize.Y / scale)
+	local captionSize = Vector2.new(ActiveCommandCaption.AbsoluteSize.X / scale, ActiveCommandCaption.AbsoluteSize.Y / scale)
+	local x = ((mouse.X - canvasPosition.X) / scale) + CAPTION_CURSOR_OFFSET_X
+	local y = ((mouse.Y - canvasPosition.Y) / scale) + CAPTION_CURSOR_OFFSET_Y
+
+	x = math.clamp(x, CAPTION_SCREEN_PADDING, math.max(CAPTION_SCREEN_PADDING, canvasSize.X - captionSize.X - CAPTION_RIGHT_PADDING))
+	y = math.clamp(y, CAPTION_SCREEN_PADDING, math.max(CAPTION_SCREEN_PADDING, canvasSize.Y - captionSize.Y - CAPTION_SCREEN_PADDING))
+
+	ActiveCommandCaption.Position = UDim2.fromOffset(math.floor(x + 0.5), math.floor(y + 0.5))
+end
+
+local function hideCommandCaption(source)
+	if source and captionSource ~= source then
+		return
+	end
+
+	captionHoverVersion = captionHoverVersion + 1
+	captionSource = nil
+	ActiveCommandCaption.Visible = false
+	stopCaptionPositioning()
+end
+
+local function showCommandCaption(text, source)
+	text = trim(text)
+	if text == "" then
+		hideCommandCaption(source)
+		return
+	end
+
+	local label = getCaptionLabel()
+	if label and label:IsA("TextLabel") then
+		label.Text = text
+	end
+
+	captionSource = source
+	ActiveCommandCaption.BackgroundTransparency = 0.2
+	ActiveCommandCaption.Visible = true
+	updateCommandCaptionPosition()
+	task.defer(updateCommandCaptionPosition)
+
+	if not captionPositionConnection then
+		captionPositionConnection = RunService.RenderStepped:Connect(updateCommandCaptionPosition)
+	end
+end
+
+local function bindSuggestionHover(entry)
+	if entry:GetAttribute("CaptionHoverBound") == true then
+		return
+	end
+
+	entry:SetAttribute("CaptionHoverBound", true)
+
+	entry.MouseEnter:Connect(function()
+		local captionText = trim(entry:GetAttribute("CaptionText") or "")
+		if captionText == "" then
+			return
+		end
+
+		captionHoverVersion = captionHoverVersion + 1
+		local version = captionHoverVersion
+		captionSource = entry
+
+		task.delay(CAPTION_HOVER_DELAY, function()
+			if version ~= captionHoverVersion or captionSource ~= entry or entry.Parent == nil then
+				return
+			end
+
+			showCommandCaption(entry:GetAttribute("CaptionText") or "", entry)
+		end)
+	end)
+
+	entry.MouseLeave:Connect(function()
+		hideCommandCaption(entry)
+	end)
+
+	entry.AncestryChanged:Connect(function(_, parent)
+		if parent == nil then
+			hideCommandCaption(entry)
+		end
+	end)
+end
+
+local function collectTextTokensWithBounds(text)
+	local tokens = {}
+	local searchIndex = 1
+
+	while searchIndex <= #text do
+		local startIndex, endIndex = string.find(text, "%S+", searchIndex)
+		if not startIndex then
+			break
+		end
+
+		tokens[#tokens + 1] = {
+			text = string.sub(text, startIndex, endIndex),
+			startIndex = startIndex,
+			endIndex = endIndex,
+		}
+		searchIndex = endIndex + 1
+	end
+
+	return tokens
+end
+
+local function getInputCursorPosition(text)
+	local cursor = Input.CursorPosition
+	if type(cursor) ~= "number" or cursor < 1 then
+		cursor = #text + 1
+	end
+
+	return math.clamp(cursor, 1, #text + 1)
+end
+
+local function getCurrentTokenContext(text)
+	local cursor = getInputCursorPosition(text)
+	local tokens = collectTextTokensWithBounds(text)
+	local currentToken = nil
+	local currentIndex = 1
+
+	for index, token in ipairs(tokens) do
+		if cursor >= token.startIndex and cursor <= token.endIndex + 1 then
+			currentToken = token
+			currentIndex = index
+			break
+		end
+
+		if cursor > token.endIndex + 1 then
+			currentIndex = index + 1
+		elseif cursor < token.startIndex then
+			currentIndex = index
+			break
+		end
+	end
+
+	if not currentToken then
+		currentToken = {
+			text = "",
+			startIndex = cursor,
+			endIndex = cursor - 1,
+		}
+	end
+
+	return {
+		cursor = cursor,
+		tokens = tokens,
+		currentToken = currentToken,
+		currentIndex = currentIndex,
+	}
+end
+
+local function getAutoCompleteContext(text)
+	local tokenContext = getCurrentTokenContext(text)
+	local tokens = tokenContext.tokens
+	local currentToken = tokenContext.currentToken
+	local currentIndex = tokenContext.currentIndex
+	local commandToken = tokens[1]
+
+	if currentIndex <= 1 or not commandToken then
+		local tokenStart = currentToken.startIndex
+		local tokenText = currentToken.text
+		if startsWith(tokenText, "/") then
+			tokenStart = tokenStart + 1
+			tokenText = string.sub(tokenText, 2)
+		end
+
+		return {
+			mode = "commands",
+			partial = tokenText,
+			tokenStart = tokenStart,
+			tokenEnd = currentToken.endIndex + 1,
+		}
+	end
+
+	local commandText = commandToken.text
+	if startsWith(commandText, "/") then
+		commandText = string.sub(commandText, 2)
+	end
+
+	local command = findCommand(registryByName, registryByAlias, commandText)
+	if not command then
+		return nil
+	end
+
+	local syntax = command.syntax or {}
+	local argumentIndex = currentIndex - 1
+	if argumentIndex < 1 or argumentIndex > #syntax then
+		return nil
+	end
+
+	return {
+		mode = "parameters",
+		command = command,
+		syntax = syntax,
+		spec = syntax[argumentIndex],
+		argumentIndex = argumentIndex,
+		partial = currentToken.text,
+		tokenStart = currentToken.startIndex,
+		tokenEnd = currentToken.endIndex + 1,
+	}
+end
+
+local function scoreTextCandidate(candidate, query)
+	candidate = toLower(tostring(candidate or ""))
+	query = toLower(tostring(query or ""))
+
+	if query == "" then
+		return 1000 + #candidate
+	end
+
+	if candidate == query then
+		return 0
+	end
+
+	if startsWith(candidate, query) then
+		return 10 + (#candidate - #query)
+	end
+
+	local containsIndex = string.find(candidate, query, 1, true)
+	if containsIndex then
+		return 40 + containsIndex + (#candidate - #query)
+	end
+
+	local queryIndex = 1
+	local gap = 0
+	for candidateIndex = 1, #candidate do
+		if string.sub(candidate, candidateIndex, candidateIndex) == string.sub(query, queryIndex, queryIndex) then
+			queryIndex = queryIndex + 1
+			if queryIndex > #query then
+				return 70 + gap + (#candidate - #query)
+			end
+		else
+			gap = gap + 1
+		end
+	end
+
+	return nil
+end
+
+local function pushAutoCompleteItem(items, seen, item)
+	local value = tostring(item.value or "")
+	if value == "" then
+		return
+	end
+
+	local key = toLower(item.mode or "") .. ":" .. toLower(value) .. ":" .. tostring(item.tokenStart or "")
+	if seen[key] then
+		return
+	end
+
+	seen[key] = true
+	items[#items + 1] = item
+end
+
+local function sortAutoCompleteItems(items)
+	table.sort(items, function(left, right)
+		if left.score ~= right.score then
+			return (left.score or 1000) < (right.score or 1000)
+		end
+
+		return toLower(left.label or left.value or "") < toLower(right.label or right.value or "")
+	end)
+
+	return items
+end
+
+local function limitAutoCompleteItems(items)
+	local limited = {}
+	for index, item in ipairs(items) do
+		if index > AUTOCOMPLETE_LIMIT then
+			break
+		end
+
+		limited[#limited + 1] = item
+	end
+
+	return limited
+end
+
+local function formatRemainingSyntax(syntax, argumentIndex)
+	local parts = {}
+	for index = argumentIndex + 1, #syntax do
+		local spec = syntax[index]
+		local token = "<" .. getCommandTag(spec)
+		if spec.required == false then
+			token = token .. "?"
+		end
+		parts[#parts + 1] = token .. ">"
+	end
+
+	return table.concat(parts, " ")
+end
+
+local function formatParameterAutoCompleteLabel(value, syntax, argumentIndex, appendSyntax)
+	local label = tostring(value or "")
+	if appendSyntax == false then
+		return label
+	end
+
+	local remaining = formatRemainingSyntax(syntax, argumentIndex)
+	if remaining == "" then
+		return label
+	end
+
+	return label .. " " .. remaining
+end
+
+local function getSpecSuggestionSource(spec, partial, command)
+	local source = spec.suggestions
+	if type(source) ~= "function" then
+		return source
+	end
+
+	local ok, result = pcall(source, {
+		partial = partial,
+		text = Input.Text,
+		command = command,
+		argument = spec,
+		context = commandContext,
+		player = LocalPlayer,
+	})
+
+	if ok then
+		return result
+	end
+
+	return nil
+end
+
+local function readSuggestionValue(raw)
+	if type(raw) == "table" then
+		local value = raw.value or raw.Value or raw.name or raw.Name or raw[1]
+		if value == nil then
+			return nil
+		end
+
+		return tostring(value),
+			tostring(raw.label or raw.Label or raw.title or raw.Title or value),
+			tostring(raw.caption or raw.Caption or raw.description or raw.Description or ""),
+			raw.appendSyntax ~= false
+	end
+
+	if raw == nil then
+		return nil
+	end
+
+	return tostring(raw), tostring(raw), "", true
+end
+
+local function buildCommandAutoCompleteItems(context)
+	local query = trim(context.partial or "")
+	if query == "" then
+		return {}
+	end
+
+	local items = {}
+	local seen = {}
+
+	for _, command in ipairs(registry) do
+		local bestScore = scoreTextCandidate(command.name, query)
+		for _, alias in ipairs(command.aliases or {}) do
+			local aliasScore = scoreTextCandidate(alias, query)
+			if aliasScore and (not bestScore or aliasScore + 5 < bestScore) then
+				bestScore = aliasScore + 5
+			end
+		end
+
+		if bestScore then
+			pushAutoCompleteItem(items, seen, {
+				mode = "commands",
+				label = command.name,
+				value = command.name,
+				caption = buildCommandCaption(command),
+				score = bestScore,
+				tokenStart = context.tokenStart,
+				tokenEnd = context.tokenEnd,
+				appendSpace = #(command.syntax or {}) > 0,
+			})
+		end
+	end
+
+	sortAutoCompleteItems(items)
+	if #items == 1 and toLower(items[1].value) == toLower(query) then
+		return {}
+	end
+
+	return limitAutoCompleteItems(items)
+end
+
+local function addCustomParameterSuggestions(items, seen, context, source)
+	if type(source) ~= "table" then
+		return
+	end
+
+	for _, raw in ipairs(source) do
+		local value, label, caption, appendSyntax = readSuggestionValue(raw)
+		if value then
+			local valueScore = scoreTextCandidate(value, context.partial)
+			local labelScore = scoreTextCandidate(label, context.partial)
+			local score = valueScore or labelScore
+			if score then
+				pushAutoCompleteItem(items, seen, {
+					mode = "parameters",
+					label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, appendSyntax),
+					value = value,
+					caption = caption ~= "" and caption or (context.spec.caption or ""),
+					score = score,
+					tokenStart = context.tokenStart,
+					tokenEnd = context.tokenEnd,
+					appendSpace = context.argumentIndex < #context.syntax,
+				})
+			end
+		end
+	end
+end
+
+local function addPlayerParameterSuggestions(items, seen, context)
+	for _, player in ipairs(listPlayers(context.partial or "")) do
+		local label = player.DisplayName
+		if player.DisplayName ~= player.Name then
+			label = player.DisplayName .. " @" .. player.Name
+		end
+
+		pushAutoCompleteItem(items, seen, {
+			mode = "parameters",
+			label = formatParameterAutoCompleteLabel(label, context.syntax, context.argumentIndex, false),
+			value = player.Name,
+			caption = "@" .. player.Name,
+			score = scoreTextCandidate(player.Name, context.partial) or scoreTextCandidate(player.DisplayName, context.partial) or 1000,
+			tokenStart = context.tokenStart,
+			tokenEnd = context.tokenEnd,
+			appendSpace = context.argumentIndex < #context.syntax,
+		})
+
+		if #items >= AUTOCOMPLETE_LIMIT then
+			break
+		end
+	end
+end
+
+local function valueWithinSpecRange(value, spec)
+	local numberValue = tonumber(value)
+	if not numberValue then
+		return false
+	end
+
+	if spec.min and numberValue < spec.min then
+		return false
+	end
+
+	if spec.max and numberValue > spec.max then
+		return false
+	end
+
+	return true
+end
+
+local function addNumberParameterSuggestions(items, seen, context)
+	local spec = context.spec
+	local candidates = {}
+
+	if spec.min then
+		candidates[#candidates + 1] = spec.min
+	end
+	candidates[#candidates + 1] = 0
+	candidates[#candidates + 1] = 1
+	candidates[#candidates + 1] = 10
+	if spec.max then
+		candidates[#candidates + 1] = spec.max
+	end
+
+	for _, value in ipairs(candidates) do
+		if valueWithinSpecRange(value, spec) then
+			local text = tostring(value)
+			local score = scoreTextCandidate(text, context.partial)
+			if score then
+				pushAutoCompleteItem(items, seen, {
+					mode = "parameters",
+					label = formatParameterAutoCompleteLabel(text, context.syntax, context.argumentIndex, true),
+					value = text,
+					caption = spec.caption or getCommandTag(spec),
+					score = score,
+					tokenStart = context.tokenStart,
+					tokenEnd = context.tokenEnd,
+					appendSpace = context.argumentIndex < #context.syntax,
+				})
+			end
+		end
+	end
+end
+
+local function addKeyParameterSuggestions(items, seen, context)
+	for _, keyCode in ipairs(Enum.KeyCode:GetEnumItems()) do
+		if keyCode.Name ~= "Unknown" then
+			local display = getKeyCodeText(keyCode) or keyCode.Name
+			local score = scoreTextCandidate(keyCode.Name, context.partial) or scoreTextCandidate(display, context.partial)
+			if score then
+				pushAutoCompleteItem(items, seen, {
+					mode = "parameters",
+					label = formatParameterAutoCompleteLabel(display, context.syntax, context.argumentIndex, false),
+					value = keyCode.Name,
+					caption = keyCode.Name,
+					score = score,
+					tokenStart = context.tokenStart,
+					tokenEnd = context.tokenEnd,
+					appendSpace = context.argumentIndex < #context.syntax,
+				})
+			end
+		end
+	end
+end
+
+local function addPlaceholderParameterSuggestion(items, seen, context)
+	local value = getCommandTag(context.spec)
+	if value == "" then
+		return
+	end
+
+	local score = scoreTextCandidate(value, context.partial)
+	if not score then
+		return
+	end
+
+	pushAutoCompleteItem(items, seen, {
+		mode = "parameters",
+		label = formatParameterAutoCompleteLabel(value, context.syntax, context.argumentIndex, true),
+		value = value,
+		caption = context.spec.caption or context.spec.name or value,
+		score = score,
+		tokenStart = context.tokenStart,
+		tokenEnd = context.tokenEnd,
+		appendSpace = context.argumentIndex < #context.syntax,
+	})
+end
+
+local function buildParameterAutoCompleteItems(context)
+	local items = {}
+	local seen = {}
+	local source = getSpecSuggestionSource(context.spec, context.partial or "", context.command)
+
+	addCustomParameterSuggestions(items, seen, context, source)
+
+	local kind = getSpecKind(context.spec)
+	if kind == "player" then
+		addPlayerParameterSuggestions(items, seen, context)
+	elseif kind == "int" or kind == "number" then
+		addNumberParameterSuggestions(items, seen, context)
+	elseif kind == "key" then
+		addKeyParameterSuggestions(items, seen, context)
+	else
+		addPlaceholderParameterSuggestion(items, seen, context)
+	end
+
+	return limitAutoCompleteItems(sortAutoCompleteItems(items))
+end
+
+local function getAutoCompleteRows()
+	local rows = {}
+	for _, child in ipairs(AutoComplete:GetChildren()) do
+		if child:IsA("GuiObject") and child:GetAttribute("AutoCompleteEntry") == true then
+			rows[#rows + 1] = child
+		end
+	end
+
+	table.sort(rows, function(left, right)
+		return left.LayoutOrder < right.LayoutOrder
+	end)
+
+	return rows
+end
+
+local function destroyAutoCompleteRow(row)
+	cancelEntryAnimations(row)
+	cachedEntryVisuals[row] = nil
+	if row and row.Parent ~= nil then
+		row:Destroy()
+	end
+end
+
+local function clearAutoCompleteRows()
+	for _, row in ipairs(getAutoCompleteRows()) do
+		destroyAutoCompleteRow(row)
+	end
+end
+
+local function updateAutoCompleteSelection()
+	local rows = getAutoCompleteRows()
+	for _, row in ipairs(rows) do
+		local index = row:GetAttribute("AutoCompleteIndex")
+		if row:IsA("TextButton") then
+			row.TextColor3 = index == autoCompleteSelectedIndex and AUTOCOMPLETE_SELECTED_COLOR or AUTOCOMPLETE_IDLE_COLOR
+		end
+	end
+end
+
+local function updateAutoCompletePosition()
+	if not AutoComplete.Visible then
+		return
+	end
+
+	local scale = getRootScale()
+	local cursor = getInputCursorPosition(Input.Text)
+	local textBeforeCursor = string.sub(Input.Text, 1, math.max(0, cursor - 1))
+	local textWidth = 0
+
+	local ok, bounds = pcall(function()
+		return TextService:GetTextSize(textBeforeCursor, Input.TextSize, Input.Font, Vector2.new(10000, Input.AbsoluteSize.Y))
+	end)
+
+	if ok and bounds then
+		textWidth = bounds.X
+	end
+
+	local inputLocalX = (Input.AbsolutePosition.X - CommandBar.AbsolutePosition.X) / scale
+	local inputLocalY = (Input.AbsolutePosition.Y - CommandBar.AbsolutePosition.Y) / scale
+	local commandBarWidth = CommandBar.AbsoluteSize.X / scale
+	local autoCompleteWidth = AutoComplete.AbsoluteSize.X / scale
+	local x = inputLocalX + textWidth + AUTOCOMPLETE_CURSOR_OFFSET_X
+	local y = inputLocalY - AUTOCOMPLETE_CURSOR_OFFSET_Y
+
+	x = math.clamp(x, 6, math.max(6, commandBarWidth - autoCompleteWidth - 6))
+	AutoComplete.Position = UDim2.fromOffset(math.floor(x + 0.5), math.floor(y + 0.5))
+	task.defer(function()
+		if AutoComplete.Visible then
+			local width = AutoComplete.AbsoluteSize.X / getRootScale()
+			local maxX = (CommandBar.AbsoluteSize.X / getRootScale()) - width - 6
+			local clampedX = math.clamp(x, 6, math.max(6, maxX))
+			AutoComplete.Position = UDim2.fromOffset(math.floor(clampedX + 0.5), math.floor(y + 0.5))
+		end
+	end)
+end
+
+local function createAutoCompleteRow(item, index)
+	local row = Instance.new("TextButton")
+	row.Name = "AutoCompleteEntry"
+	row.AutoButtonColor = false
+	row.AutomaticSize = Enum.AutomaticSize.XY
+	row.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	row.BackgroundTransparency = 1
+	row.BorderSizePixel = 0
+	row.LayoutOrder = index
+	row.Parent = AutoComplete
+	row.Size = UDim2.fromOffset(0, 15)
+	row.Text = item.label or item.value or ""
+	row.TextColor3 = index == autoCompleteSelectedIndex and AUTOCOMPLETE_SELECTED_COLOR or AUTOCOMPLETE_IDLE_COLOR
+	row.TextSize = 12
+	row.Font = Enum.Font.GothamMedium
+	applyMontserratSemiBold(row)
+	row.LineHeight = 1
+	row.RichText = false
+	row.TextStrokeTransparency = 1
+	row.TextTransparency = 0
+	row.TextTruncate = Enum.TextTruncate.AtEnd
+	row.TextWrapped = false
+	row.TextXAlignment = Enum.TextXAlignment.Left
+	row.TextYAlignment = Enum.TextYAlignment.Center
+	row.ZIndex = 21
+	row:SetAttribute("AutoCompleteEntry", true)
+	row:SetAttribute("AutoCompleteIndex", index)
+
+	row.MouseEnter:Connect(function()
+		autoCompleteSelectedIndex = index
+		updateAutoCompleteSelection()
+	end)
+
+	row.MouseButton1Click:Connect(function()
+		autoCompleteConsumeFocusLost = true
+		if not acceptAutoComplete() then
+			autoCompleteConsumeFocusLost = false
+		end
+	end)
+
+	return row
+end
+
+function hideAutoComplete(animate)
+	autoCompleteVersion = autoCompleteVersion + 1
+	local version = autoCompleteVersion
+	autoCompleteItems = {}
+	autoCompleteSelectedIndex = 1
+	autoCompleteVisible = false
+
+	cancelTween(autoCompleteFrameTween)
+	cancelTween(autoCompleteStrokeTween)
+
+	if not AutoComplete.Visible then
+		clearAutoCompleteRows()
+		return
+	end
+
+	local rows = getAutoCompleteRows()
+	if not animate or #rows == 0 then
+		clearAutoCompleteRows()
+		AutoComplete.Visible = false
+		AutoComplete.BackgroundTransparency = 1
+		AutoCompleteStroke.Transparency = 1
+		return
+	end
+
+	autoCompleteFrameTween = playTween(AutoComplete, TweenInfo.new(motionCfg.entryOut, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+	})
+	autoCompleteStrokeTween = playTween(AutoCompleteStroke, TweenInfo.new(motionCfg.entryOut, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+		Transparency = 1,
+	})
+
+	table.sort(rows, function(left, right)
+		return left.LayoutOrder > right.LayoutOrder
+	end)
+
+	for index, row in ipairs(rows) do
+		task.delay((index - 1) * motionCfg.errorGap, function()
+			if version ~= autoCompleteVersion or row.Parent == nil then
+				return
+			end
+
+			animateEntry(row, false, motionCfg.entryOut, function()
+				if version == autoCompleteVersion then
+					destroyAutoCompleteRow(row)
+				end
+			end)
+		end)
+	end
+
+	task.delay((#rows * motionCfg.errorGap) + motionCfg.entryOut, function()
+		if version == autoCompleteVersion then
+			clearAutoCompleteRows()
+			AutoComplete.Visible = false
+		end
+	end)
+end
+
+local function renderAutoCompleteItems(items)
+	if #items == 0 then
+		hideAutoComplete(true)
+		return
+	end
+
+	autoCompleteVersion = autoCompleteVersion + 1
+	local version = autoCompleteVersion
+	autoCompleteItems = items
+	autoCompleteSelectedIndex = 1
+	autoCompleteVisible = true
+
+	cancelTween(autoCompleteFrameTween)
+	cancelTween(autoCompleteStrokeTween)
+	clearAutoCompleteRows()
+
+	AutoComplete.Visible = true
+	AutoComplete.BackgroundTransparency = 1
+	AutoCompleteStroke.Transparency = 1
+
+	for index, item in ipairs(items) do
+		local row = createAutoCompleteRow(item, index)
+		setEntryVisible(row, false)
+		task.delay((index - 1) * motionCfg.entryGap, function()
+			if version ~= autoCompleteVersion or not AutoComplete.Visible or row.Parent == nil then
+				return
+			end
+
+			animateEntry(row, true, motionCfg.entryIn)
+		end)
+	end
+
+	autoCompleteFrameTween = playTween(AutoComplete, TweenInfo.new(motionCfg.entryIn, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0.2,
+	})
+	autoCompleteStrokeTween = playTween(AutoCompleteStroke, TweenInfo.new(motionCfg.entryIn, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		Transparency = 0.75,
+	})
+
+	updateAutoCompleteSelection()
+	updateAutoCompletePosition()
+	task.defer(updateAutoCompletePosition)
+end
+
+function syncAutoComplete()
+	if not isOpen or isClosing or not isFocused or UserInputService:GetFocusedTextBox() ~= Input then
+		hideAutoComplete(true)
+		return
+	end
+
+	if autoCompleteSuppressText ~= nil then
+		if autoCompleteSuppressText == Input.Text then
+			hideAutoComplete(false)
+			return
+		end
+
+		autoCompleteSuppressText = nil
+	end
+
+	local context = getAutoCompleteContext(Input.Text)
+	if not context then
+		hideAutoComplete(true)
+		return
+	end
+
+	local items = {}
+	if context.mode == "commands" then
+		items = buildCommandAutoCompleteItems(context)
+	elseif context.mode == "parameters" then
+		items = buildParameterAutoCompleteItems(context)
+	end
+
+	renderAutoCompleteItems(items)
+end
+
+function moveAutoCompleteSelection(direction)
+	if not autoCompleteVisible or #autoCompleteItems == 0 then
+		return false
+	end
+
+	autoCompleteSelectedIndex = autoCompleteSelectedIndex + direction
+	if autoCompleteSelectedIndex > #autoCompleteItems then
+		autoCompleteSelectedIndex = 1
+	elseif autoCompleteSelectedIndex < 1 then
+		autoCompleteSelectedIndex = #autoCompleteItems
+	end
+
+	updateAutoCompleteSelection()
+	return true
+end
+
+function acceptAutoComplete()
+	if not autoCompleteVisible or #autoCompleteItems == 0 then
+		return false
+	end
+
+	local item = autoCompleteItems[autoCompleteSelectedIndex]
+	if not item then
+		return false
+	end
+
+	local text = Input.Text
+	local tokenStart = math.clamp(item.tokenStart or 1, 1, #text + 1)
+	local tokenEnd = math.clamp(item.tokenEnd or tokenStart, tokenStart, #text + 1)
+	local before = string.sub(text, 1, tokenStart - 1)
+	local after = string.sub(text, tokenEnd)
+	local insertText = tostring(item.value or "")
+
+	if item.appendSpace and not startsWith(after, " ") then
+		insertText = insertText .. " "
+	end
+
+	local nextText = before .. insertText .. after
+	autoCompleteSuppressText = nextText
+	hideAutoComplete(false)
+
+	suppressTextRender = true
+	Input.Text = nextText
+	suppressTextRender = false
+	Input.CursorPosition = #before + #insertText + 1
+	renderCurrentState(false)
+
+	task.defer(function()
+		if isOpen and not isClosing then
+			Input:CaptureFocus()
+			isFocused = true
+		end
+	end)
+
+	task.delay(0.2, function()
+		autoCompleteConsumeFocusLost = false
+	end)
+
+	return true
 end
 
 local function updateTouchButtonVisibility()
@@ -2696,6 +3831,7 @@ function buildSuggestionSignature(kind, data, layoutOrder)
 			tostring(data.DisplayName or ""),
 			tostring(data.UserName or ""),
 			tostring(data.Avatar or ""),
+			tostring(data.Caption or ""),
 			tostring(layoutOrder or 0),
 		}, "\30")
 	end
@@ -2704,6 +3840,7 @@ function buildSuggestionSignature(kind, data, layoutOrder)
 		tostring(kind),
 		tostring(data.Title or ""),
 		tostring(data.Description or ""),
+		tostring(data.Caption or ""),
 		tostring(layoutOrder or 0),
 	}, "\30")
 end
@@ -2775,10 +3912,12 @@ function createSuggestionEntry(kind, data, layoutOrder)
 
 	entry.Parent = CommandsList
 	entry.Visible = true
+	entry.Active = true
 	entry.LayoutOrder = layoutOrder or 0
 	entry:SetAttribute("SuggestionEntry", true)
 	entry:SetAttribute("SuggestionRemoving", false)
 	entry:SetAttribute("SuggestionVisualState", "visible")
+	bindSuggestionHover(entry)
 	return entry
 end
 
@@ -2786,23 +3925,28 @@ function applySuggestionData(entry, kind, data)
 	local key = buildSuggestionKey(kind, data)
 	entry:SetAttribute("SuggestionKey", key)
 	entry:SetAttribute("SuggestionKind", kind)
+	entry:SetAttribute("CaptionText", trim(tostring(data.Caption or "")))
 
 	if kind == "Player" then
 		entry.Name = "PlayerEntry"
 		local content = entry:FindFirstChild("Content")
-		local labels = content and content:FindFirstChild("LabelsContainer")
-		local avatar = content and content:FindFirstChild("Avatar")
+		local labels = (content and content:FindFirstChild("LabelsContainer")) or entry:FindFirstChild("LabelsContainer")
+		local avatar = (content and content:FindFirstChild("Avatar")) or entry:FindFirstChild("Avatar")
 		local displayName = labels and labels:FindFirstChild("DisplayName")
 		local userName = labels and labels:FindFirstChild("UserName")
 
 		if displayName and displayName:IsA("TextLabel") then
-			displayName.Text = data.DisplayName or ""
+			local displayText = tostring(data.DisplayName or "")
+			displayName.Text = displayText
+			displayName.Visible = trim(displayText) ~= ""
 			displayName.TextColor3 = PLAYER_NAME_COLOR
 			displayName.TextTransparency = 0
 		end
 
 		if userName and userName:IsA("TextLabel") then
-			userName.Text = normalizeUserName(data.UserName or "")
+			local userText = normalizeUserName(data.UserName or "")
+			userName.Text = userText
+			userName.Visible = trim(userText) ~= "@"
 			userName.TextColor3 = PLAYER_USERNAME_COLOR
 			userName.TextTransparency = 0.08
 		end
@@ -2810,6 +3954,10 @@ function applySuggestionData(entry, kind, data)
 		if avatar and avatar:IsA("ImageLabel") then
 			avatar.Image = resolveAvatarImage(data)
 			avatar.ImageTransparency = 0
+		end
+
+		if captionSource == entry and ActiveCommandCaption.Visible then
+			showCommandCaption(entry:GetAttribute("CaptionText") or "", entry)
 		end
 
 		return
@@ -2820,17 +3968,25 @@ function applySuggestionData(entry, kind, data)
 	local description = entry:FindFirstChild("Description")
 
 	if title and title:IsA("TextLabel") then
+		local titleText = tostring(data.Title or "")
 		title.RichText = data.RichText == true
-		title.Text = data.Title or ""
+		title.Text = titleText
+		title.Visible = trim(titleText) ~= ""
 		title.TextColor3 = data.TitleColor or ((kind == "Error") and ERROR_COLOR or (kind == "Ready" and READY_COLOR or COMMAND_TITLE_COLOR))
 		title.TextTransparency = data.TitleTransparency or 0
 	end
 
 	if description and description:IsA("TextLabel") then
+		local descriptionText = tostring(data.Description or "")
 		description.RichText = data.DescriptionRichText == true
-		description.Text = data.Description or ""
+		description.Text = descriptionText
+		description.Visible = trim(descriptionText) ~= ""
 		description.TextColor3 = data.DescriptionColor or ((kind == "Error") and ERROR_COLOR or (kind == "Ready" and READY_COLOR or COMMAND_DESCRIPTION_COLOR))
 		description.TextTransparency = data.DescriptionTransparency or ((kind == "Error" or kind == "Ready") and 0 or 0.08)
+	end
+
+	if captionSource == entry and ActiveCommandCaption.Visible then
+		showCommandCaption(entry:GetAttribute("CaptionText") or "", entry)
 	end
 end
 
@@ -3104,13 +4260,14 @@ function renderSuggestionDefinitions(definitions, options)
 end
 
 local library = {
-	Name = "CLI6",
+	Name = "Matt",
 	Version = "1.0.0",
 	Gui = ScreenGui,
 	Refs = {
 		Canvas = Canvas,
 		CommandsMenu = CommandsMenu,
 		CommandBar = CommandBar,
+		AutoComplete = AutoComplete,
 		Content = Content,
 		Input = Input,
 		UIScale = UIScale,
@@ -3118,8 +4275,11 @@ local library = {
 		Templates = {
 			Folder = Examples,
 			CommandSugestion = CommandSugestion,
+			CommandSuggestion = CommandSugestion,
 			PlayerSuggestion = PlayerSuggestion,
+			CommandCaption = CommandCaption,
 		},
+		ActiveCommandCaption = ActiveCommandCaption,
 	},
 }
 
@@ -3164,6 +4324,7 @@ function renderCurrentState(animateAdded)
 		RemoveDelay = currentState.kind == "error" and motionCfg.errorGap or motionCfg.entryGap,
 		RemoveDuration = currentState.kind == "error" and motionCfg.errorOut or motionCfg.entryOut,
 	})
+	syncAutoComplete()
 end
 
 function waitForKeyRelease(keyCode, token)
@@ -3187,6 +4348,8 @@ function finishClose(token)
 	end
 
 	cancelInputTypewriter(false)
+	hideAutoComplete(false)
+	hideCommandCaption()
 	suppressTextRender = true
 	Input.Text = ""
 	suppressTextRender = false
@@ -3216,6 +4379,8 @@ function startClose()
 	isOpen = false
 	isFocused = false
 	isClosing = true
+	hideAutoComplete(true)
+	hideCommandCaption()
 	updateTouchButtonVisibility()
 	renderVersion = renderVersion + 1
 	openVersion = openVersion + 1
@@ -3344,7 +4509,7 @@ maybeNotifyReady = function()
 	didNotifyReady = true
 	showToast({
 		type = "info",
-		title = "CLI6 loaded",
+		title = "Matt loaded",
 		description = ("%d command(s) ready. Press %s to open."):format(#registry, getHotkeyLabel()),
 		duration = 3.2,
 	})
@@ -4040,6 +5205,7 @@ function library:Open(prefillText, waitForKeyCode)
 
 	isOpen = true
 	isClosing = false
+	autoCompleteSuppressText = nil
 	CommandsMenu.Visible = true
 	updateTouchButtonVisibility()
 
@@ -4073,6 +5239,7 @@ function library:Open(prefillText, waitForKeyCode)
 			playPlaceholderTypewriterIn()
 		end
 		Input.CursorPosition = #Input.Text + 1
+		syncAutoComplete()
 	end)
 end
 
@@ -4123,6 +5290,7 @@ end
 
 function library:Submit(_submitKeyCode)
 	local text = Input.Text
+	hideAutoComplete(false)
 
 	if not isBlankCommandText(text) then
 		local ok, result = self:Execute(text)
@@ -4153,12 +5321,16 @@ function library:Destroy()
 	for id in pairs(toastMap) do
 		destroyToast(id)
 	end
+	hideAutoComplete(false)
+	hideCommandCaption()
 	destroySuggestionEntries()
 	cancelTween(menuStateTween)
 	cancelTween(menuStrokeTween)
 	cancelTween(dividerTween)
 	cancelTween(listHeightTween)
 	cancelTween(menuHeightTween)
+	cancelTween(autoCompleteFrameTween)
+	cancelTween(autoCompleteStrokeTween)
 
 	if ScreenGui and ScreenGui.Parent ~= nil then
 		ScreenGui:Destroy()
@@ -4192,10 +5364,12 @@ end)
 connections[#connections + 1] = UIScale:GetPropertyChangedSignal("Scale"):Connect(function()
 	lastListHeight = -1
 	scheduleListHeightUpdate()
+	updateAutoCompletePosition()
 end)
 
 connections[#connections + 1] = Canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 	refreshLayout(true)
+	updateAutoCompletePosition()
 end)
 
 connections[#connections + 1] = Input:GetPropertyChangedSignal("Text"):Connect(function()
@@ -4207,12 +5381,41 @@ connections[#connections + 1] = Input:GetPropertyChangedSignal("Text"):Connect(f
 	renderCurrentState(false)
 end)
 
+connections[#connections + 1] = Input:GetPropertyChangedSignal("CursorPosition"):Connect(function()
+	if not isOpen or isClosing then
+		return
+	end
+
+	syncAutoComplete()
+	updateAutoCompletePosition()
+end)
+
 connections[#connections + 1] = Input.Focused:Connect(function()
 	isFocused = true
+	syncAutoComplete()
 end)
 
 connections[#connections + 1] = Input.FocusLost:Connect(function(enterPressed, inputObject)
 	isFocused = false
+
+	if enterPressed and autoCompleteVisible and #autoCompleteItems > 0 then
+		autoCompleteConsumeFocusLost = true
+		acceptAutoComplete()
+		return
+	end
+
+	hideAutoComplete(true)
+
+	if autoCompleteConsumeFocusLost then
+		autoCompleteConsumeFocusLost = false
+		task.defer(function()
+			if isOpen and not isClosing then
+				Input:CaptureFocus()
+				isFocused = true
+			end
+		end)
+		return
+	end
 
 	if enterPressed then
 		local submitKeyCode = nil
@@ -4232,6 +5435,29 @@ end)
 connections[#connections + 1] = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if input.UserInputType ~= Enum.UserInputType.Keyboard then
 		return
+	end
+
+	if isOpen and isFocused and autoCompleteVisible then
+		if input.KeyCode == Enum.KeyCode.Down then
+			moveAutoCompleteSelection(1)
+			return
+		end
+
+		if input.KeyCode == Enum.KeyCode.Up then
+			moveAutoCompleteSelection(-1)
+			return
+		end
+
+		if input.KeyCode == Enum.KeyCode.Tab
+			or input.KeyCode == Enum.KeyCode.Return
+			or input.KeyCode == Enum.KeyCode.KeypadEnter
+		then
+			autoCompleteConsumeFocusLost = true
+			if acceptAutoComplete() then
+				return
+			end
+			autoCompleteConsumeFocusLost = false
+		end
 	end
 
 	if input.KeyCode == Enum.KeyCode.Escape and (isOpen or isClosing or isFocused) then

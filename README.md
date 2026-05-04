@@ -1,20 +1,20 @@
 # Matt
 
-`Matt` is a command palette UI library for Roblox executors and local scripts.
+`Matt` is a command palette user interface library for your script.
 
-This library is meant to be distributed as an obfuscated/private build and loaded via `HttpGet` (not local files). The supported way to extend and integrate it is through the public API documented below (Config, Command, Commands, etc.). Editing the library source is not part of the public workflow.
-
-The goal is simple: load one file, register your commands, and let the library handle the rest:
+The goal is simple: load a file, register your commands, and let the library take care of the rest:
 
 - command suggestions
 - player suggestions
+- inline autocomplete for commands and arguments
+- hover captions for command/player suggestions
 - argument validation
 - cascading list animations
-- responsive layout for desktop, tablet, and phone
-- built-in notifications
-- runtime configuration without forcing extra modules into the user's script
+- responsive layout for desktop, tablet, and mobile
+- integrated notifications
+- runtime configuration without forcing extra modules in the user script
 
-If you want something that feels clean to use from an executor script, this is the shape:
+If you're looking for a clean and easy-to-use interface from a executor script, this is the ideal solution:
 
 ```lua
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))()
@@ -43,8 +43,6 @@ library:Command({
 ```lua
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau"))()
 ```
-
-`https://raw.githubusercontent.com/korunash/Matt/refs/heads/main/ui-library/source.luau` should point to the obfuscated build you want to distribute (GitHub raw, a paste/CDN link, etc.). Local usage (readfile/loadfile) is intentionally not supported in the public workflow.
 
 ### 2. Configure the basics
 
@@ -117,6 +115,7 @@ Every command is just a table. The library sanitizes it before registration.
 | `name` | `string` | yes | Main command name. |
 | `aliases` | `{string}` | no | Alternative names. |
 | `description` | `string` | no | Shown in the suggestion list. |
+| `caption` | `string` | no | Hover caption text. Falls back to `description`. |
 | `syntax` | `{table}` | no | Argument list. |
 | `execute` | `function` | yes | Called when the command is submitted. |
 
@@ -140,6 +139,39 @@ Every command is just a table. The library sanitizes it before registration.
 | `required` | `boolean` | Optional arguments are allowed when set to `false`. |
 | `min` | `number` | Works for `int` and `number`. |
 | `max` | `number` | Works for `int` and `number`. |
+| `caption` | `string` | Hover caption for autocomplete values. |
+| `suggestions` | `{string/table}` or `function` | Optional autocomplete values for `param`, `int`, `number`, `player`, or `key`. |
+
+### Autocomplete and captions
+
+Autocomplete is built in. While the input is focused, the library shows a small `CommandBar/AutoComplete` list near the text cursor.
+
+- While typing the command name, autocomplete suggests command names only.
+- After entering a command argument, autocomplete switches to parameter suggestions.
+- `Up` and `Down` move through the list.
+- `Enter` and `Tab` accept the selected suggestion.
+- Losing focus cancels autocomplete.
+
+For custom argument suggestions:
+
+```lua
+syntax = {
+	{
+		name = "item",
+		kind = "param",
+		tag = "item",
+		suggestions = {
+			"sword",
+			{ value = "potion", label = "potion", caption = "Restores health" },
+		},
+	},
+	{ name = "amount", kind = "int", tag = "int", min = 1, max = 99 },
+}
+```
+
+`suggestions` may also be a function. It receives `{ partial, text, command, argument, context, player }` and should return the same list shape.
+
+`CommandCaption` lives at `Refs.Templates.CommandCaption` and is cloned as an overlay while hovering command/player suggestions. Empty `Title` or `Description` labels are hidden automatically so blank text does not leave gaps in the main suggestion list.
 
 ## Everyday API
 
@@ -239,6 +271,8 @@ These are mostly useful if you want to drive the list manually.
 | `Render()` | `nil` | Re-renders from the current input state. |
 | `GetDisplayLabel(command)` | `string` | Rich text command label. |
 | `GetDisplayDescription(command)` | `string` | Command description with aliases. |
+
+Custom rendered command/player definitions can include `Caption`; it is used by the hover `CommandCaption`.
 
 ### Notifications
 
@@ -426,17 +460,16 @@ library:Error({
 })
 ```
 
-The library also uses notifications internally for startup, hotkey updates, scale updates, and command errors when those notification flags are enabled.
+The library also uses notifications internally for startup, hotkey updates, scale updates, and command errors when those notification flags are enabled. Basic notifications.
 
 ## Mobile and Tablet Notes
 
 This library is not desktop-only.
-
 It already includes:
 
-- responsive menu width
-- responsive maximum list height
-- responsive toast width
+- automatic menu width
+- automatic maximum list height
+- automatic toast width
 - support for smaller viewports
 
 For touch-first setups, you have two practical options:
